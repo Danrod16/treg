@@ -15,7 +15,11 @@
     "completed": 1180,
     "succeeded": 1176,
     "failed": 4,
-    "skipped": 0
+    "skipped": 0,
+    "selected": 1240,
+    "not_started": 55,
+    "in_progress": 5,
+    "interrupted": 0
   },
   "spent_micro": 390000,
   "max_cost_micro": 5000000,
@@ -23,5 +27,14 @@
   "failed_rows_until": null,
   "error": null,
   "started_at": "2026-10-19T07:00:00Z",
-  "finished_at": null
+  "finished_at": null,
+  "terminal": false,
+  "reserved_micro": 24000,
+  "usage_final": false,
+  "links": {
+    "self": "/api/workbench/runs/r_8f21"
+  },
+  "created_at": "2026-10-19T07:00:00Z",
+  "install_id": "ins_lead-emails",
+  "trigger_id": "trg_weekly"
 }

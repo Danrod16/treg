@@ -15,7 +15,11 @@
     "completed": 310,
     "succeeded": 305,
     "failed": 5,
-    "skipped": 0
+    "skipped": 0,
+    "selected": 310,
+    "not_started": 0,
+    "in_progress": 0,
+    "interrupted": 0
   },
   "spent_micro": 2100000,
   "max_cost_micro": 3000000,
@@ -29,6 +33,10 @@
     "version": 1,
     "table_bindings": {
       "table": "tbl_01HZX1Q4"
+    },
+    "database_generation": 1,
+    "schema_versions": {
+      "tbl_01HZX1Q4": 1
     }
   },
   "trace": [
@@ -82,5 +90,22 @@
   "log": [
     "14:40:01 310 rows",
     "15:02:00 305 done, 5 failed, $2.10"
-  ]
+  ],
+  "terminal": true,
+  "reserved_micro": 0,
+  "usage_final": true,
+  "links": {
+    "self": "/api/workbench/runs/r_8e90",
+    "failures": "/api/workbench/runs/r_8e90/failures"
+  },
+  "created_at": "2026-10-18T14:40:00Z",
+  "install_id": "ins_q4-accounts_people",
+  "trigger_id": null,
+  "failure_selection": {
+    "selection_id": "failset_8e90",
+    "failed_count": 5,
+    "eligible_count": 4,
+    "blocked_count": 1,
+    "expires_at": "2026-11-18T14:40:00Z"
+  }
 }

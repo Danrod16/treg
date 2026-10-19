@@ -60,3 +60,16 @@ Conditional patch never recreates a deleted row. A matching committed write rece
 schema/row revision checks, after authorization, maintenance, generation and expiry checks. Expired
 or unknown outcomes cannot be retried with an automatically replaced identity. The write-key wire
 encoding and recovery window must be agreed before SDK writes ship.
+
+## Run admission and retry boundaries
+
+Run admission and selective retry require a caller-supplied idempotency key. A response wait is
+an observation preference; it cannot create another execution or cancel accepted work. Dry-run
+previews create no Run. Pending execution returns 202 and a handle; terminal outcomes and previews
+return 200. Stop is naturally idempotent and preserves an already terminal outcome.
+
+Retry selects retained failed item identities, not the table's current error cells. It requires a
+terminal source, rejects blocked selections as a whole, and preserves source code and bindings
+while reading current selected rows. It creates a new Run and may incur charges again. Interrupted
+and unstarted work are separate progress categories. These are contract requirements for future
+routes and runtime implementation, not guarantees implemented by the fixture server.

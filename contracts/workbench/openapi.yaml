@@ -233,7 +233,8 @@ paths:
         - { name: install, in: query, schema: { type: string } }
         - { name: table, in: query, schema: { type: string } }
         - { name: status, in: query, schema: { $ref: '#/components/schemas/RunStatus' } }
-        - { name: cursor, in: query, schema: { type: string } }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
       responses:
         '200':
           description: A page of runs
@@ -241,9 +242,10 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [runs]
+                required: [runs, next_cursor, has_more]
                 properties:
                   runs: { type: array, items: { $ref: '#/components/schemas/Run' } }
+                  has_more: { type: boolean }
                   next_cursor: { type: [string, 'null'] }
 
   /runs/{runId}:
@@ -253,6 +255,7 @@ paths:
       summary: One run with its progress, spend and a page of its trace
       parameters:
         - { name: trace_cursor, in: query, schema: { type: string } }
+        - $ref: '#/components/parameters/Limit'
       responses:
         '200': { description: The run, content: { application/json: { schema: { $ref: '#/components/schemas/RunDetail' } } } }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -262,19 +265,49 @@ paths:
     post:
       operationId: stopRun
       summary: Stop a run
-      description: No new calls start; calls in flight finish and settle. The run ends as `stopped`.
+      description: >-
+        Naturally idempotent. Block new operations; in-flight effects must settle or reconcile.
+        Return 202 while closure is pending and 200 for an existing terminal outcome. Finalizing
+        without an accepted stop keeps its original outcome; stopping never overwrites completion.
+        It does not pause the Install or undo committed rows.
       responses:
-        '200': { description: The run, now stopping, content: { application/json: { schema: { $ref: '#/components/schemas/Run' } } } }
+        '200': { description: Existing terminal outcome, content: { application/json: { schema: { $ref: '#/components/schemas/Run' } } } }
+        '202': { description: Stopping or already finalizing, content: { application/json: { schema: { $ref: '#/components/schemas/Run' } } } }
         '409': { $ref: '#/components/responses/Conflict' }
+
+  /runs/{runId}/failures:
+    parameters: [{ $ref: '#/components/parameters/RunId' }]
+    get:
+      operationId: listRunFailures
+      summary: Read the retained failure selection, not the table's current error markers
+      parameters: [{ $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' }]
+      responses:
+        '200': { description: Selected items with re-execution eligibility, content: { application/json: { schema: { $ref: '#/components/schemas/FailurePage' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /runs/{runId}/retry-failed:
     parameters: [{ $ref: '#/components/parameters/RunId' }]
     post:
       operationId: retryFailedRows
       summary: Run the failed rows of a finished run again
-      description: A new run over only those rows, linked through `retry_of_run_id`. Available until `failed_rows_until`.
+      description: >-
+        Requires a terminal source Run and a retained failure manifest. Validate every selected
+        item; blocked or unknown outcomes reject the whole selection. Never include interrupted,
+        not-started, skipped or successful no-match items implicitly. A retry starts the selected
+        original handlers as a NEW Run; it is not recovery of original checkpoints and may incur
+        charges again. Preserve source code, bindings and saved handler arguments; read current rows
+        and freeze each batch before effects. Changed bindings, code or generation require a conflict.
+        After current authorization, resolve matching accepted identities BEFORE manifest expiry or
+        current configuration checks. The fingerprint includes the source, selection and execution
+        options, but excludes wait_s. Never replace a timed-out key or broaden an empty selection.
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RetryRequest' } } }
       responses:
-        '202': { description: The new run, content: { application/json: { schema: { $ref: '#/components/schemas/RunHandle' } } } }
+        '200': { description: The admitted retry has a terminal outcome, content: { application/json: { schema: { $ref: '#/components/schemas/RunDetail' } } } }
+        '202': { description: The admitted retry is pending, content: { application/json: { schema: { $ref: '#/components/schemas/RunHandle' } } } }
         '409': { $ref: '#/components/responses/Conflict' }
 
   /installs:
@@ -329,28 +362,31 @@ paths:
       operationId: runInstall
       summary: Run an install now
       description: >-
-        With `dry_run`, returns the rows that would be processed and an estimate, plus a token to
-        confirm with. Otherwise waits up to `wait_s`; a run that outlives it comes back as a handle.
+        Adapter over the shared Treg Run admission service; ordinary /call/<tool> relay is unchanged.
+        Dry-run creates no Run, hold or effects and returns 200 with a confirmation token bound to
+        the exact inputs and revision. Execution revalidates admission and requires Idempotency-Key.
+        Resolve names to stable Install identity; updates and calls carry that identity to avoid
+        applying an old intent to a replacement with the same name. Scope the key to team, caller
+        and start operation; exclude wait_s from the execution fingerprint. After current access
+        checks, replay the admitted Run before resolving new configuration. Persist Run, immutable
+        snapshot, identity claim and dispatch intent before dispatch. Timeout is not a new execution.
+        Return 200 for a terminal outcome, 202 otherwise; wait timeout does not cancel the Run.
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody:
+        required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                input: { type: object, additionalProperties: true }
-                dry_run: { type: boolean, default: false }
-                confirm_token: { type: string }
-                wait_s: { type: integer, minimum: 0, maximum: 60, default: 60 }
+            schema: { $ref: '#/components/schemas/RunRequest' }
       responses:
-        '200': { description: Finished within the wait, content: { application/json: { schema: { $ref: '#/components/schemas/RunDetail' } } } }
-        '202':
-          description: Still running, or a dry run
+        '200':
+          description: Terminal Run outcome, or side-effect-free preview
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: '#/components/schemas/RunHandle'
+                  - $ref: '#/components/schemas/RunDetail'
                   - $ref: '#/components/schemas/DryRun'
+        '202': { description: The admitted Run remains pending, content: { application/json: { schema: { $ref: '#/components/schemas/RunHandle' } } } }
         '402': { $ref: '#/components/responses/Budget' }
         '409': { $ref: '#/components/responses/Conflict' }
 
@@ -442,6 +478,8 @@ components:
           description: Stable, for a program
           enum:
             - not_found
+            - invalid_request
+            - request_too_large
             - idempotency_conflict
             - revision_stale
             - metadata_revision_conflict
@@ -462,6 +500,11 @@ components:
             - sql_rejected
             - run_not_running
             - retry_window_closed
+            - retry_selection_blocked
+            - retry_selection_empty
+            - retry_configuration_conflict
+            - retry_artifact_unavailable
+            - run_not_terminal
             - trigger_paused
             - install_busy
             - budget_exceeded
@@ -771,36 +814,153 @@ components:
         truncated: { type: boolean }
         elapsed_ms: { type: integer, minimum: 0 }
 
+    RunRequest:
+      type: object
+      additionalProperties: false
+      required: [install_id, expected_install_revision]
+      properties:
+        install_id: { type: string, minLength: 1 }
+        expected_install_revision: { type: integer, minimum: 1 }
+        input: { type: object, additionalProperties: true }
+        max_cost_micro: { $ref: '#/components/schemas/Micro' }
+        dry_run: { type: boolean, default: false }
+        confirm_token: { type: string }
+        wait_s: { type: integer, minimum: 0, maximum: 60, default: 20, description: Response wait only; never part of execution identity }
+
+    RetryRequest:
+      type: object
+      additionalProperties: false
+      required: [selection, input_mode]
+      properties:
+        selection:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [type, selection_id]
+              properties:
+                type: { const: failed }
+                selection_id: { type: string, minLength: 1 }
+            - type: object
+              additionalProperties: false
+              required: [type, selection_id, item_ids]
+              properties:
+                type: { const: items }
+                selection_id: { type: string, minLength: 1 }
+                item_ids: { type: array, minItems: 1, maxItems: 1000, uniqueItems: true, items: { type: string, minLength: 1 } }
+        input_mode: { const: current_rows }
+        options:
+          type: object
+          additionalProperties: false
+          properties:
+            expected_install_revision: { type: integer, minimum: 1 }
+            max_cost_micro: { $ref: '#/components/schemas/Micro' }
+        wait_s: { type: integer, minimum: 0, maximum: 60, default: 0 }
+
+    RunLinks:
+      type: object
+      required: [self]
+      properties:
+        self: { type: string }
+        failures: { type: string }
+
+    RetrySelectionSummary:
+      type: object
+      required: [selection_id, selected_count, input_mode]
+      properties:
+        selection_id: { type: string }
+        selected_count: { type: integer, minimum: 1 }
+        input_mode: { const: current_rows }
+
+    FailureSelectionSummary:
+      type: object
+      required: [selection_id, failed_count, eligible_count, blocked_count, expires_at]
+      properties:
+        selection_id: { type: string }
+        failed_count: { type: integer, minimum: 0 }
+        eligible_count: { type: integer, minimum: 0 }
+        blocked_count: { type: integer, minimum: 0 }
+        expires_at: { $ref: '#/components/schemas/Timestamp' }
+
+    FailurePage:
+      type: object
+      required: [run_id, selection_id, expires_at, items, next_cursor, has_more]
+      properties:
+        run_id: { type: string }
+        selection_id: { type: string }
+        expires_at: { $ref: '#/components/schemas/Timestamp' }
+        next_cursor: { type: [string, 'null'] }
+        has_more: { type: boolean }
+        items:
+          type: array
+          items:
+            type: object
+            required: [item_id, table_id, row_id, error, retry]
+            properties:
+              item_id: { type: string, description: Original handler invocation; a row can have multiple items }
+              table_id: { type: string }
+              row_id: { type: string }
+              error:
+                type: object
+                required: [code, message]
+                properties:
+                  code: { type: string }
+                  message: { type: string }
+              retry:
+                type: object
+                required: [eligible, reason]
+                properties:
+                  eligible: { type: boolean }
+                  reason: { type: [string, 'null'] }
+
     RunStatus:
       type: string
       enum: [queued, running, stopping, finalizing, succeeded, partial, failed, stopped]
 
     Progress:
       type: object
-      required: [unit, completed, succeeded, failed, skipped]
+      required: [unit, total, selected, not_started, in_progress, completed, succeeded, failed, skipped, interrupted]
       properties:
         unit: { type: string, enum: [rows, operations] }
+        selected: { type: integer, minimum: 0, description: not_started + in_progress + completed + interrupted }
+        not_started: { type: integer, minimum: 0 }
+        in_progress: { type: integer, minimum: 0 }
+        interrupted: { type: integer, minimum: 0, description: Started work stopped before a terminal item outcome; not a failed item }
         total: { type: [integer, 'null'], minimum: 0, description: Unknown until the run has counted its work }
-        completed: { type: integer, minimum: 0 }
+        completed: { type: integer, minimum: 0, description: succeeded + failed + skipped }
         succeeded: { type: integer, minimum: 0 }
         failed: { type: integer, minimum: 0, description: Errors only; a row with no result is succeeded }
         skipped: { type: integer, minimum: 0 }
 
     RunHandle:
       type: object
-      required: [run_id, status, progress, spent_micro]
+      required: [kind, run_id, status, terminal, progress, spent_micro, reserved_micro, usage_final, links]
       properties:
+        kind: { const: run }
         run_id: { type: string }
+        terminal: { type: boolean }
+        links: { $ref: '#/components/schemas/RunLinks' }
+        retry_of_run_id: { type: [string, 'null'] }
+        retry_selection: { $ref: '#/components/schemas/RetrySelectionSummary' }
         status: { $ref: '#/components/schemas/RunStatus' }
         progress: { $ref: '#/components/schemas/Progress' }
+        reserved_micro: { $ref: '#/components/schemas/Micro' }
+        usage_final: { type: boolean, description: True only after all reservations are settled or released }
         spent_micro: { $ref: '#/components/schemas/Micro' }
         next: { type: array, items: { type: string }, description: Useful next actions, as commands }
 
     Run:
       type: object
-      required: [id, status, progress, spent_micro, max_cost_micro, source, started_at]
+      required: [id, status, terminal, progress, spent_micro, reserved_micro, usage_final, max_cost_micro, source, created_at, started_at, links]
       properties:
         id: { type: string }
+        terminal: { type: boolean }
+        links: { $ref: '#/components/schemas/RunLinks' }
+        install_id: { type: [string, 'null'], description: Stable Install identity; install is its display reference }
+        trigger_id: { type: [string, 'null'], description: Stable trigger identity; trigger is its display key }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        stop_reason: { type: [string, 'null'] }
+        failure_selection: { $ref: '#/components/schemas/FailureSelectionSummary' }
+        retry_selection: { $ref: '#/components/schemas/RetrySelectionSummary' }
         status: { $ref: '#/components/schemas/RunStatus' }
         install: { type: [string, 'null'] }
         tool: { type: [string, 'null'], description: '`<team>.<name>@<version>`, or null for an inline script' }
@@ -809,12 +969,14 @@ components:
         trigger: { type: [string, 'null'], description: The trigger key that started it }
         started_by: { type: string, description: A member, an agent, or `trigger <key>` }
         progress: { $ref: '#/components/schemas/Progress' }
+        reserved_micro: { $ref: '#/components/schemas/Micro' }
+        usage_final: { type: boolean, description: True only after all reservations are settled or released }
         spent_micro: { $ref: '#/components/schemas/Micro' }
         max_cost_micro: { $ref: '#/components/schemas/Micro' }
         retry_of_run_id: { type: [string, 'null'] }
         failed_rows_until: { type: [string, 'null'], format: date-time, description: Failed rows can be retried until then }
         error: { type: [string, 'null'] }
-        started_at: { $ref: '#/components/schemas/Timestamp' }
+        started_at: { type: [string, 'null'], format: date-time }
         finished_at: { type: [string, 'null'], format: date-time }
 
     TraceStep:
@@ -843,6 +1005,8 @@ components:
                 config_revision: { type: integer }
                 version: { type: integer }
                 table_bindings: { type: object, additionalProperties: { type: string } }
+                database_generation: { type: integer, minimum: 1 }
+                schema_versions: { type: object, additionalProperties: { type: integer, minimum: 1 } }
                 mode: { type: string }
                 event_key: { type: string }
             trace: { type: array, items: { $ref: '#/components/schemas/TraceStep' } }

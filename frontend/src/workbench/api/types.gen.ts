@@ -229,9 +229,28 @@ export interface paths {
         put?: never;
         /**
          * Stop a run
-         * @description No new calls start; calls in flight finish and settle. The run ends as `stopped`.
+         * @description Naturally idempotent. Block new operations; in-flight effects must settle or reconcile. Return 202 while closure is pending and 200 for an existing terminal outcome. Finalizing without an accepted stop keeps its original outcome; stopping never overwrites completion. It does not pause the Install or undo committed rows.
          */
         post: operations["stopRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runs/{runId}/failures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: components["parameters"]["RunId"];
+            };
+            cookie?: never;
+        };
+        /** Read the retained failure selection, not the table's current error markers */
+        get: operations["listRunFailures"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -251,7 +270,7 @@ export interface paths {
         put?: never;
         /**
          * Run the failed rows of a finished run again
-         * @description A new run over only those rows, linked through `retry_of_run_id`. Available until `failed_rows_until`.
+         * @description Requires a terminal source Run and a retained failure manifest. Validate every selected item; blocked or unknown outcomes reject the whole selection. Never include interrupted, not-started, skipped or successful no-match items implicitly. A retry starts the selected original handlers as a NEW Run; it is not recovery of original checkpoints and may incur charges again. Preserve source code, bindings and saved handler arguments; read current rows and freeze each batch before effects. Changed bindings, code or generation require a conflict. After current authorization, resolve matching accepted identities BEFORE manifest expiry or current configuration checks. The fingerprint includes the source, selection and execution options, but excludes wait_s. Never replace a timed-out key or broaden an empty selection.
          */
         post: operations["retryFailedRows"];
         delete?: never;
@@ -317,7 +336,7 @@ export interface paths {
         put?: never;
         /**
          * Run an install now
-         * @description With `dry_run`, returns the rows that would be processed and an estimate, plus a token to confirm with. Otherwise waits up to `wait_s`; a run that outlives it comes back as a handle.
+         * @description Adapter over the shared Treg Run admission service; ordinary /call/<tool> relay is unchanged. Dry-run creates no Run, hold or effects and returns 200 with a confirmation token bound to the exact inputs and revision. Execution revalidates admission and requires Idempotency-Key. Resolve names to stable Install identity; updates and calls carry that identity to avoid applying an old intent to a replacement with the same name. Scope the key to team, caller and start operation; exclude wait_s from the execution fingerprint. After current access checks, replay the admitted Run before resolving new configuration. Persist Run, immutable snapshot, identity claim and dispatch intent before dispatch. Timeout is not a new execution. Return 200 for a terminal outcome, 202 otherwise; wait timeout does not cancel the Run.
          */
         post: operations["runInstall"];
         delete?: never;
@@ -391,7 +410,7 @@ export interface components {
              * @description Stable, for a program
              * @enum {string}
              */
-            code: "not_found" | "idempotency_conflict" | "revision_stale" | "metadata_revision_conflict" | "schema_version_conflict" | "database_generation_conflict" | "row_revision_conflict" | "row_missing" | "schema_dependency_conflict" | "table_in_use" | "table_maintenance" | "invalid_cursor" | "cursor_expired" | "operation_expired" | "write_outcome_unknown" | "table_bound" | "table_creating" | "database_provisioning" | "sql_rejected" | "run_not_running" | "retry_window_closed" | "trigger_paused" | "install_busy" | "budget_exceeded" | "unattended_cap_reached" | "binding_invalid" | "secret_input_unschedulable";
+            code: "not_found" | "invalid_request" | "request_too_large" | "idempotency_conflict" | "revision_stale" | "metadata_revision_conflict" | "schema_version_conflict" | "database_generation_conflict" | "row_revision_conflict" | "row_missing" | "schema_dependency_conflict" | "table_in_use" | "table_maintenance" | "invalid_cursor" | "cursor_expired" | "operation_expired" | "write_outcome_unknown" | "table_bound" | "table_creating" | "database_provisioning" | "sql_rejected" | "run_not_running" | "retry_window_closed" | "retry_selection_blocked" | "retry_selection_empty" | "retry_configuration_conflict" | "retry_artifact_unavailable" | "run_not_terminal" | "trigger_paused" | "install_busy" | "budget_exceeded" | "unattended_cap_reached" | "binding_invalid" | "secret_input_unschedulable";
             /** @description False only when non-commit is confirmed; omitted for unknown outcomes */
             committed?: boolean;
             conflicts?: {
@@ -633,13 +652,94 @@ export interface components {
             truncated: boolean;
             elapsed_ms?: number;
         };
+        RunRequest: {
+            install_id: string;
+            expected_install_revision: number;
+            input?: {
+                [key: string]: unknown;
+            };
+            max_cost_micro?: components["schemas"]["Micro"];
+            /** @default false */
+            dry_run: boolean;
+            confirm_token?: string;
+            /**
+             * @description Response wait only; never part of execution identity
+             * @default 20
+             */
+            wait_s: number;
+        };
+        RetryRequest: {
+            selection: {
+                /** @constant */
+                type: "failed";
+                selection_id: string;
+            } | {
+                /** @constant */
+                type: "items";
+                selection_id: string;
+                item_ids: string[];
+            };
+            /** @constant */
+            input_mode: "current_rows";
+            options?: {
+                expected_install_revision?: number;
+                max_cost_micro?: components["schemas"]["Micro"];
+            };
+            /** @default 0 */
+            wait_s: number;
+        };
+        RunLinks: {
+            self: string;
+            failures?: string;
+        };
+        RetrySelectionSummary: {
+            selection_id: string;
+            selected_count: number;
+            /** @constant */
+            input_mode: "current_rows";
+        };
+        FailureSelectionSummary: {
+            selection_id: string;
+            failed_count: number;
+            eligible_count: number;
+            blocked_count: number;
+            expires_at: components["schemas"]["Timestamp"];
+        };
+        FailurePage: {
+            run_id: string;
+            selection_id: string;
+            expires_at: components["schemas"]["Timestamp"];
+            next_cursor: string | null;
+            has_more: boolean;
+            items: {
+                /** @description Original handler invocation; a row can have multiple items */
+                item_id: string;
+                table_id: string;
+                row_id: string;
+                error: {
+                    code: string;
+                    message: string;
+                };
+                retry: {
+                    eligible: boolean;
+                    reason: string | null;
+                };
+            }[];
+        };
         /** @enum {string} */
         RunStatus: "queued" | "running" | "stopping" | "finalizing" | "succeeded" | "partial" | "failed" | "stopped";
         Progress: {
             /** @enum {string} */
             unit: "rows" | "operations";
+            /** @description not_started + in_progress + completed + interrupted */
+            selected: number;
+            not_started: number;
+            in_progress: number;
+            /** @description Started work stopped before a terminal item outcome; not a failed item */
+            interrupted: number;
             /** @description Unknown until the run has counted its work */
-            total?: number | null;
+            total: number | null;
+            /** @description succeeded + failed + skipped */
             completed: number;
             succeeded: number;
             /** @description Errors only; a row with no result is succeeded */
@@ -647,15 +747,34 @@ export interface components {
             skipped: number;
         };
         RunHandle: {
+            /** @constant */
+            kind: "run";
             run_id: string;
+            terminal: boolean;
+            links: components["schemas"]["RunLinks"];
+            retry_of_run_id?: string | null;
+            retry_selection?: components["schemas"]["RetrySelectionSummary"];
             status: components["schemas"]["RunStatus"];
             progress: components["schemas"]["Progress"];
+            reserved_micro: components["schemas"]["Micro"];
+            /** @description True only after all reservations are settled or released */
+            usage_final: boolean;
             spent_micro: components["schemas"]["Micro"];
             /** @description Useful next actions */
             next?: string[];
         };
         Run: {
             id: string;
+            terminal: boolean;
+            links: components["schemas"]["RunLinks"];
+            /** @description Stable Install identity; install is its display reference */
+            install_id?: string | null;
+            /** @description Stable trigger identity; trigger is its display key */
+            trigger_id?: string | null;
+            created_at: components["schemas"]["Timestamp"];
+            stop_reason?: string | null;
+            failure_selection?: components["schemas"]["FailureSelectionSummary"];
+            retry_selection?: components["schemas"]["RetrySelectionSummary"];
             status: components["schemas"]["RunStatus"];
             install?: string | null;
             /** @description `<team>.<name>@<version>`, or null for an inline script */
@@ -669,6 +788,9 @@ export interface components {
             /** @description A member */
             started_by?: string;
             progress: components["schemas"]["Progress"];
+            reserved_micro: components["schemas"]["Micro"];
+            /** @description True only after all reservations are settled or released */
+            usage_final: boolean;
             spent_micro: components["schemas"]["Micro"];
             max_cost_micro: components["schemas"]["Micro"];
             retry_of_run_id?: string | null;
@@ -678,7 +800,8 @@ export interface components {
              */
             failed_rows_until?: string | null;
             error?: string | null;
-            started_at: components["schemas"]["Timestamp"];
+            /** Format: date-time */
+            started_at: string | null;
             /** Format: date-time */
             finished_at?: string | null;
         };
@@ -700,6 +823,10 @@ export interface components {
                 version?: number;
                 table_bindings?: {
                     [key: string]: string;
+                };
+                database_generation?: number;
+                schema_versions?: {
+                    [key: string]: number;
                 };
                 mode?: string;
                 event_key?: string;
@@ -1300,7 +1427,9 @@ export interface operations {
                 install?: string;
                 table?: string;
                 status?: components["schemas"]["RunStatus"];
-                cursor?: string;
+                /** @description Opaque continuation bound to the team and unchanged query */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
             };
             header?: never;
             path?: never;
@@ -1316,7 +1445,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         runs: components["schemas"]["Run"][];
-                        next_cursor?: string | null;
+                        has_more: boolean;
+                        next_cursor: string | null;
                     };
                 };
             };
@@ -1326,6 +1456,7 @@ export interface operations {
         parameters: {
             query?: {
                 trace_cursor?: string;
+                limit?: components["parameters"]["Limit"];
             };
             header?: never;
             path: {
@@ -1358,8 +1489,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The run */
+            /** @description Existing terminal outcome */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Run"];
+                };
+            };
+            /** @description Stopping or already finalizing */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1370,9 +1510,13 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
-    retryFailedRows: {
+    listRunFailures: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Opaque continuation bound to the team and unchanged query */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
             header?: never;
             path: {
                 runId: components["parameters"]["RunId"];
@@ -1381,7 +1525,47 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The new run */
+            /** @description Selected items with re-execution eligibility */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailurePage"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    retryFailedRows: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Chosen by the client before the first attempt and reused on retries. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                runId: components["parameters"]["RunId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetryRequest"];
+            };
+        };
+        responses: {
+            /** @description The admitted retry has a terminal outcome */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunDetail"];
+                };
+            };
+            /** @description The admitted retry is pending */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -1489,43 +1673,37 @@ export interface operations {
     runInstall: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description Chosen by the client before the first attempt and reused on retries. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
             path: {
                 installName: components["parameters"]["InstallName"];
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": {
-                    input?: {
-                        [key: string]: unknown;
-                    };
-                    /** @default false */
-                    dry_run?: boolean;
-                    confirm_token?: string;
-                    /** @default 60 */
-                    wait_s?: number;
-                };
+                "application/json": components["schemas"]["RunRequest"];
             };
         };
         responses: {
-            /** @description Finished within the wait */
+            /** @description Terminal Run outcome, or side-effect-free preview */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunDetail"];
+                    "application/json": components["schemas"]["RunDetail"] | components["schemas"]["DryRun"];
                 };
             };
-            /** @description Still running, or a dry run */
+            /** @description The admitted Run remains pending */
             202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunHandle"] | components["schemas"]["DryRun"];
+                    "application/json": components["schemas"]["RunHandle"];
                 };
             };
             402: components["responses"]["Budget"];
