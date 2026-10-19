@@ -1716,16 +1716,20 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                 _capture(_overflow_event(pending, outcome, charged))
             else:
                 _capture(pending)  # the vendor's own answer stands
-                # Platform capacity exhaustion: replace the vendor's error with treg's typed 503.
-                # The upstream body may contain provider account links, top-up URLs, or treg's
-                # injected credentials echoed back—none of which belong in a customer-facing error.
-                # Incidents 2026-10-16..19: TikHub 402 "Insufficient balance" with tikhub.io links,
-                # Litescrape 402 {"error_code":"insufficient_credits"}—customers thought their own
-                # balance was the problem, not treg's platform account.
-                if (capacity_signal is not None
-                        and capacity_signatures.is_exhausting(
-                            capacity_signatures.classify(mk.provider, response.status,
-                                                         httpx.Headers(response.raw_headers), body[:4096]))):
+                # Platform balance exhaustion on 4xx errors: replace the vendor's error with treg's
+                # typed 503. The upstream body may contain provider account links, top-up URLs, or
+                # treg's injected credentials echoed back—none of which belong in a customer-facing
+                # error. Incidents 2026-10-16..19: TikHub 402 "Insufficient balance" with tikhub.io
+                # links, Litescrape 402 {"error_code":"insufficient_credits"}—customers thought
+                # their own balance was the problem, not treg's platform account.
+                # Only intercept "balance" signals on 4xx: 429 "quota" tells users to slow down (a
+                # useful signal), 200s with capacity signals are empty results, not misleading pages.
+                classified = capacity_signatures.classify(
+                    mk.provider, response.status, httpx.Headers(response.raw_headers), body[:4096])
+                if (response.status >= 400
+                        and capacity_signal is not None
+                        and classified is not None
+                        and classified.kind == "balance"):
                     from .resolve import _provider_capacity_unavailable
                     from ...domain.capacity import events as capacity_events
                     await response.close()
