@@ -35,6 +35,11 @@ and committed; `frontend/src/workbench/api/client.ts` is the only module that im
 pages read view models from it. Changing the API means changing the yaml, regenerating, and
 adjusting fixtures in the same change.
 
+Defaults remain optional in generated request types. Explicit request variants retain required
+row revisions and update identities in TypeScript as well as JSON Schema. Mutation methods accept
+an explicit key from their caller and preserve the payload; the client never generates a replacement
+key or retries an uncertain operation on its own. Success types include every declared 2xx response.
+
 ## Fixtures reach the page two ways, from one directory
 
 `TREG_FIXTURES=1 npm --prefix frontend run dev` mounts `scripts/fixture-plugin.mjs`, which answers
