@@ -19,7 +19,9 @@
         "spent_micro": 20000
       },
       "install": "lead-emails",
-      "id": "trg_lead-emails_weekly"
+      "id": "trg_lead-emails_weekly",
+      "install_id": "ins_lead-emails",
+      "run_as_membership_id": 87
     },
     {
       "key": "inbound",
@@ -32,7 +34,9 @@
       "webhook_url": "https://treg.example/hooks/9f3a1c21",
       "last_run": null,
       "install": "lead-emails",
-      "id": "trg_lead-emails_inbound"
+      "id": "trg_lead-emails_inbound",
+      "install_id": "ins_lead-emails",
+      "run_as_membership_id": 87
     },
     {
       "key": "daily",
@@ -53,7 +57,9 @@
         "spent_micro": 200000
       },
       "install": "competitor-watch",
-      "id": "trg_competitor-watch_daily"
+      "id": "trg_competitor-watch_daily",
+      "install_id": "ins_competitor-watch",
+      "run_as_membership_id": 87
     }
   ],
   "unattended": {

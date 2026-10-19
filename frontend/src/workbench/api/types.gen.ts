@@ -615,7 +615,25 @@ export interface components {
              */
             on_conflict?: "error" | "update_if_revision_matches";
             rows: components["schemas"]["RowWrite"][];
-        } & (unknown & unknown);
+        } & ({
+            /** @constant */
+            mode: "patch";
+            rows: {
+                id: string;
+                expected_revision: number;
+                values: {
+                    [key: string]: unknown;
+                };
+            }[];
+        } | {
+            /** @constant */
+            mode: "upsert";
+            /** @enum {string} */
+            on_conflict: "error" | "update_if_revision_matches";
+        } | {
+            /** @enum {string} */
+            mode: "insert" | "net_new";
+        });
         RowsDelete: {
             database_generation: number;
             expected_schema_version: number;
@@ -746,6 +764,7 @@ export interface components {
             failed: number;
             skipped: number;
         };
+        /** @description Common Run observation fields; detailed responses add metadata and trace while retaining these same identities and progress fields */
         RunHandle: {
             /** @constant */
             kind: "run";
@@ -764,6 +783,14 @@ export interface components {
             next?: string[];
         };
         Run: {
+            /** @constant */
+            kind: "run";
+            /** @description Canonical identity shared by admission */
+            run_id: string;
+            /**
+             * @deprecated
+             * @description Compatibility alias equal to run_id; new consumers use run_id
+             */
             id: string;
             terminal: boolean;
             links: components["schemas"]["RunLinks"];
@@ -902,6 +929,9 @@ export interface components {
         Trigger: {
             /** @description Stable trigger identity; key is the human-readable reference */
             id: string;
+            install_id: string;
+            /** @description Authorized membership in the installing team; revalidated for each new automatic Run */
+            run_as_membership_id: number;
             key: string;
             /** @enum {string} */
             kind: "schedule" | "webhook";
@@ -930,9 +960,11 @@ export interface components {
                 spent_micro?: components["schemas"]["Micro"];
             } | null;
         };
+        /** @description Kind and parent Install are immutable. Creation defaults to paused; activation revalidates the selected same-team run_as_membership_id and caller authority. Invalid execution identity pauses admission; never fall back to an administrator. Configuration changes do not reset net_new memory or alter accepted Runs. Aggregate removal semantics remain pending agreement. */
         TriggerSave: {
             /** @description Required on update; must match the existing trigger */
             id?: string;
+            run_as_membership_id?: number;
             /** @description 0 creates; otherwise compare-and-set against the current trigger revision */
             config_revision: number;
             key: string;
@@ -946,7 +978,14 @@ export interface components {
             timezone?: string;
             /** @enum {string} */
             mode?: "all" | "net_new";
-        } & unknown;
+        } & ({
+            /** @constant */
+            config_revision?: 0;
+            run_as_membership_id: number;
+        } | {
+            config_revision?: number;
+            id: string;
+        });
         CredentialStatus: {
             name: string;
             /** @enum {string} */
@@ -1015,7 +1054,14 @@ export interface components {
             triggers?: components["schemas"]["TriggerSave"][];
             /** @description 0 when creating; otherwise the revision being changed */
             config_revision: number;
-        } & (unknown & unknown);
+        } & ({
+            /** @constant */
+            config_revision?: 0;
+            tool: string;
+        } | {
+            config_revision?: number;
+            install_id: string;
+        });
         UnattendedBudget: {
             spent_micro: components["schemas"]["Micro"];
             cap_micro: components["schemas"]["Micro"];

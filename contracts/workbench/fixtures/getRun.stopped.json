@@ -39,5 +39,7 @@
   "trigger_id": "trg_lead-emails_weekly",
   "stop_reason": "user_requested",
   "trace": [],
-  "log": []
+  "log": [],
+  "kind": "run",
+  "run_id": "r_8f21"
 }

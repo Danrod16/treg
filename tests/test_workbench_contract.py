@@ -97,6 +97,19 @@ def test_create_table_does_not_accept_imported_rows(contract):
         validator.validate({**payload, "rows": [{"email": "a@example.test"}]})
 
 
+@pytest.mark.parametrize("sql_name", ["email\n", "LEADS", "sqlite_master", "_treg_receipts"])
+def test_table_creation_rejects_unsafe_or_reserved_column_names(contract, sql_name):
+    payload = {
+        "name": "leads",
+        "columns": [{"sql_name": "email", "storage_type": "TEXT", "nullable": True}],
+    }
+    validator = _request_validator(contract, "createTable")
+    validator.validate(payload)
+    payload["columns"][0]["sql_name"] = sql_name
+    with pytest.raises(ValidationError):
+        validator.validate(payload)
+
+
 def test_table_metadata_update_requires_compare_and_set_revision(contract):
     payload = {"name": "renamed-leads", "expected_metadata_revision": 2}
     validator = _request_validator(contract, "updateTable")
@@ -188,12 +201,29 @@ def test_retry_rejects_missing_or_ambiguous_selection(contract, invalid):
         validator.validate(invalid)
 
 
+def _run_objects(value):
+    if isinstance(value, dict):
+        if "progress" in value and "spent_micro" in value:
+            yield value
+        for child in value.values():
+            yield from _run_objects(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _run_objects(child)
+
+
 def _run_examples():
     for path in FIXTURES:
         payload = json.loads(path.read_text())
-        for run in payload.get("runs", [payload]):
-            if "progress" in run and "status" in run:
-                yield pytest.param(run, id=f"{path.name}:{run.get('id', run.get('run_id'))}")
+        for run in _run_objects(payload):
+            yield pytest.param(run, id=f"{path.name}:{run.get('id', run.get('run_id'))}")
+
+
+@pytest.mark.parametrize("run", list(_run_examples()))
+def test_run_fixture_preserves_the_shared_handle_identity(contract, run):
+    _validator(contract, {"$ref": "#/components/schemas/RunHandle"}).validate(run)
+    if "id" in run:
+        assert run["run_id"] == run["id"]
 
 
 @pytest.mark.parametrize("run", list(_run_examples()))
@@ -258,17 +288,32 @@ def test_install_save_requires_an_integer_compare_and_set_revision(contract, rev
         _request_validator(contract, "saveInstall").validate(payload)
 
 
-@pytest.mark.parametrize("revision,missing", [(0, "config_revision"), (2, "config_revision"), (2, "id")])
+@pytest.mark.parametrize("revision,missing", [
+    (0, "config_revision"), (0, "run_as_membership_id"), (2, "config_revision"), (2, "id"),
+])
 def test_trigger_save_requires_create_or_update_identity(contract, revision, missing):
     trigger = {"key": "weekly", "kind": "schedule", "config_revision": revision}
     if revision:
         trigger["id"] = "trg_weekly"
+    else:
+        trigger["run_as_membership_id"] = 87
     payload = {"install_id": "ins_lead-emails", "config_revision": 2, "triggers": [trigger]}
     validator = _request_validator(contract, "saveInstall")
     validator.validate(payload)
     del trigger[missing]
     with pytest.raises(ValidationError):
         validator.validate(payload)
+
+
+@pytest.mark.parametrize("membership_id", [None, 0, -1, 1.5])
+def test_trigger_creation_requires_a_positive_integer_execution_identity(contract, membership_id):
+    trigger = {
+        "key": "weekly", "kind": "schedule", "config_revision": 0,
+        "run_as_membership_id": membership_id,
+    }
+    payload = {"install_id": "ins_lead-emails", "config_revision": 2, "triggers": [trigger]}
+    with pytest.raises(ValidationError):
+        _request_validator(contract, "saveInstall").validate(payload)
 
 
 @pytest.mark.parametrize("fixture_name,status", [

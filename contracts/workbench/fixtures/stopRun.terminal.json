@@ -107,5 +107,7 @@
     "eligible_count": 4,
     "blocked_count": 1,
     "expires_at": "2026-11-18T14:40:00Z"
-  }
+  },
+  "kind": "run",
+  "run_id": "r_8e90"
 }

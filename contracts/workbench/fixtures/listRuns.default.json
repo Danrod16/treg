@@ -38,7 +38,9 @@
       },
       "created_at": "2026-10-19T07:00:00Z",
       "install_id": "ins_lead-emails",
-      "trigger_id": "trg_lead-emails_weekly"
+      "trigger_id": "trg_lead-emails_weekly",
+      "kind": "run",
+      "run_id": "r_8f21"
     },
     {
       "id": "r_8f1c",
@@ -79,7 +81,9 @@
       },
       "created_at": "2026-10-19T07:02:00Z",
       "install_id": "ins_competitor-watch",
-      "trigger_id": "trg_competitor-watch_daily"
+      "trigger_id": "trg_competitor-watch_daily",
+      "kind": "run",
+      "run_id": "r_8f1c"
     },
     {
       "id": "r_8e90",
@@ -119,7 +123,9 @@
       },
       "created_at": "2026-10-18T14:40:00Z",
       "install_id": "ins_q4-accounts_people",
-      "trigger_id": null
+      "trigger_id": null,
+      "kind": "run",
+      "run_id": "r_8e90"
     },
     {
       "id": "r_8e71",
@@ -157,7 +163,9 @@
       },
       "created_at": "2026-10-18T09:05:00Z",
       "install_id": null,
-      "trigger_id": null
+      "trigger_id": null,
+      "kind": "run",
+      "run_id": "r_8e71"
     },
     {
       "id": "r_8d02",
@@ -197,7 +205,9 @@
       },
       "created_at": "2026-10-12T07:00:00Z",
       "install_id": "ins_lead-emails",
-      "trigger_id": "trg_lead-emails_weekly"
+      "trigger_id": "trg_lead-emails_weekly",
+      "kind": "run",
+      "run_id": "r_8d02"
     }
   ],
   "next_cursor": null,

@@ -30,7 +30,9 @@
         "at": "2026-10-12T07:00:00Z",
         "spent_micro": 20000
       },
-      "id": "trg_lead-emails_weekly"
+      "id": "trg_lead-emails_weekly",
+      "install_id": "ins_lead-emails",
+      "run_as_membership_id": 87
     },
     {
       "key": "inbound",
@@ -42,7 +44,9 @@
       "config_revision": 1,
       "webhook_url": "https://treg.example/hooks/9f3a1c21",
       "last_run": null,
-      "id": "trg_lead-emails_inbound"
+      "id": "trg_lead-emails_inbound",
+      "install_id": "ins_lead-emails",
+      "run_as_membership_id": 87
     }
   ],
   "last_run": {

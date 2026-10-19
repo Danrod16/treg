@@ -33,7 +33,9 @@
         "at": "2026-10-19T07:02:00Z",
         "spent_micro": 200000
       },
-      "id": "trg_competitor-watch_daily"
+      "id": "trg_competitor-watch_daily",
+      "install_id": "ins_competitor-watch",
+      "run_as_membership_id": 87
     }
   ],
   "last_run": {
