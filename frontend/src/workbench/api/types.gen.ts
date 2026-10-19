@@ -309,7 +309,7 @@ export interface paths {
         get: operations["getInstall"];
         /**
          * Create an install or change its settings
-         * @description Settings carry `config_revision`, not a version: a stale revision is refused. Triggers are matched by `key`; one left out of the list is archived. A webhook's signing secret is returned once, in this response only.
+         * @description Proposed aggregate adapter; replacement semantics remain pending agreement. Do not implement omission-as-archive until the full-trigger-list concurrency boundary is agreed. If replacement is chosen, its compare-and-set must cover concurrent additions, edits and removals, including omitted triggers. Individual trigger revisions alone cannot protect omitted members. config_revision=0 creates only; updates require stable install_id and the current revision. Triggers carry their own stable identity and revision. New runs use the accepted configuration; existing Runs keep snapshots. Changed bindings or versions require compatibility validation. Creation and upgrade never imply automatic trigger activation. A webhook signing secret is returned only at creation; ordinary reads and idempotent replays never redisclose it. Resolve authorized matching idempotency receipts before new-operation revision checks.
          */
         put: operations["saveInstall"];
         post?: never;
@@ -389,7 +389,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Every trigger of the team across installs */
+        /** A page of team triggers across installs */
         get: operations["listTriggers"];
         put?: never;
         post?: never;
@@ -489,7 +489,7 @@ export interface components {
              * @default other
              * @enum {string}
              */
-            kind: "people" | "companies" | "other";
+            kind?: "people" | "companies" | "other";
             columns: components["schemas"]["ColumnCreate"][];
             source?: {
                 [key: string]: unknown;
@@ -528,7 +528,7 @@ export interface components {
             expected_schema_version: number;
             expected_metadata_revision: number;
             /** @default false */
-            dry_run: boolean;
+            dry_run?: boolean;
             changes: components["schemas"]["SchemaChange"][];
         };
         SchemaPreflight: {
@@ -660,13 +660,13 @@ export interface components {
             };
             max_cost_micro?: components["schemas"]["Micro"];
             /** @default false */
-            dry_run: boolean;
+            dry_run?: boolean;
             confirm_token?: string;
             /**
              * @description Response wait only; never part of execution identity
              * @default 20
              */
-            wait_s: number;
+            wait_s?: number;
         };
         RetryRequest: {
             selection: {
@@ -686,7 +686,7 @@ export interface components {
                 max_cost_micro?: components["schemas"]["Micro"];
             };
             /** @default 0 */
-            wait_s: number;
+            wait_s?: number;
         };
         RunLinks: {
             self: string;
@@ -856,9 +856,22 @@ export interface components {
         };
         ToolVersion: {
             version: number;
+            /**
+             * @description Release availability; saving does not publish or request a listing
+             * @enum {string}
+             */
+            status: "saved" | "review" | "live" | "archived";
             /** @enum {string} */
-            status: "live" | "archived";
-            published_at: components["schemas"]["Timestamp"];
+            build_status: "queued" | "building" | "ready" | "failed";
+            /** @enum {string} */
+            check_status: "not_run" | "running" | "passed" | "failed";
+            created_at: components["schemas"]["Timestamp"];
+            created_by?: string;
+            /**
+             * Format: date-time
+             * @description Null until published; independent of saving a version
+             */
+            published_at: string | null;
             published_by?: string;
             check?: string | null;
             table_slots?: {
@@ -874,7 +887,10 @@ export interface components {
             kind: "script" | "workflow";
             summary: string;
             uses?: string[];
+            /** @description Latest saved version */
             latest_version: number;
+            /** @description Approved published version available to other teams; can lag latest_version */
+            serving_version: number | null;
             versions: components["schemas"]["ToolVersion"][];
             /** @enum {string|null} */
             listing?: "requested" | "approved" | "rejected" | "unlisted" | null;
@@ -884,6 +900,8 @@ export interface components {
             health?: "ok" | "failing" | "unknown";
         };
         Trigger: {
+            /** @description Stable trigger identity; key is the human-readable reference */
+            id: string;
             key: string;
             /** @enum {string} */
             kind: "schedule" | "webhook";
@@ -913,6 +931,10 @@ export interface components {
             } | null;
         };
         TriggerSave: {
+            /** @description Required on update; must match the existing trigger */
+            id?: string;
+            /** @description 0 creates; otherwise compare-and-set against the current trigger revision */
+            config_revision: number;
             key: string;
             /** @enum {string} */
             kind: "schedule" | "webhook";
@@ -924,7 +946,7 @@ export interface components {
             timezone?: string;
             /** @enum {string} */
             mode?: "all" | "net_new";
-        };
+        } & unknown;
         CredentialStatus: {
             name: string;
             /** @enum {string} */
@@ -933,6 +955,8 @@ export interface components {
             set_with?: string;
         };
         Install: {
+            /** @description Stable Install identity independent of the display name */
+            id: string;
             name: components["schemas"]["InstallName"];
             /** @description `<team>.<name>` */
             tool: string;
@@ -973,6 +997,8 @@ export interface components {
             };
         };
         InstallSave: {
+            /** @description Required for updates; prevents stale changes targeting a replacement name */
+            install_id?: string;
             /** @description `<team>.<name>@<version>`; required when creating */
             tool?: string;
             default_inputs?: {
@@ -985,10 +1011,11 @@ export interface components {
             paused?: boolean;
             /** @description An explicit upgrade; bindings are revalidated */
             version?: number;
+            /** @description Proposed aggregate payload; omission/removal rules require agreement before implementation */
             triggers?: components["schemas"]["TriggerSave"][];
             /** @description 0 when creating; otherwise the revision being changed */
-            config_revision?: number;
-        };
+            config_revision: number;
+        } & (unknown & unknown);
         UnattendedBudget: {
             spent_micro: components["schemas"]["Micro"];
             cap_micro: components["schemas"]["Micro"];
@@ -1579,14 +1606,18 @@ export interface operations {
     };
     listInstalls: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Opaque continuation bound to the team and unchanged query */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Every install of the team with its triggers */
+            /** @description A bounded page of installs with their triggers */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1594,6 +1625,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         installs: components["schemas"]["Install"][];
+                        next_cursor: string | null;
+                        has_more: boolean;
                     };
                 };
             };
@@ -1625,7 +1658,10 @@ export interface operations {
     saveInstall: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description Chosen by the client before the first attempt and reused on retries. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
             path: {
                 installName: components["parameters"]["InstallName"];
             };
@@ -1712,7 +1748,11 @@ export interface operations {
     };
     listMyTools: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Opaque continuation bound to the team and unchanged query */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1727,6 +1767,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         tools: components["schemas"]["ToolDefinition"][];
+                        next_cursor: string | null;
+                        has_more: boolean;
                     };
                 };
             };
@@ -1758,7 +1800,11 @@ export interface operations {
     };
     listTriggers: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Opaque continuation bound to the team and unchanged query */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1776,6 +1822,8 @@ export interface operations {
                             install: string;
                         })[];
                         unattended: components["schemas"]["UnattendedBudget"];
+                        next_cursor: string | null;
+                        has_more: boolean;
                     };
                 };
             };

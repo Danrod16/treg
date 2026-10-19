@@ -38,7 +38,7 @@
       },
       "created_at": "2026-10-19T07:00:00Z",
       "install_id": "ins_lead-emails",
-      "trigger_id": "trg_weekly"
+      "trigger_id": "trg_lead-emails_weekly"
     },
     {
       "id": "r_8f1c",
@@ -79,7 +79,7 @@
       },
       "created_at": "2026-10-19T07:02:00Z",
       "install_id": "ins_competitor-watch",
-      "trigger_id": "trg_daily"
+      "trigger_id": "trg_competitor-watch_daily"
     },
     {
       "id": "r_8e90",
@@ -197,7 +197,7 @@
       },
       "created_at": "2026-10-12T07:00:00Z",
       "install_id": "ins_lead-emails",
-      "trigger_id": "trg_weekly"
+      "trigger_id": "trg_lead-emails_weekly"
     }
   ],
   "next_cursor": null,

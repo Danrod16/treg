@@ -32,7 +32,8 @@
         "status": "failed",
         "at": "2026-10-19T07:02:00Z",
         "spent_micro": 200000
-      }
+      },
+      "id": "trg_competitor-watch_daily"
     }
   ],
   "last_run": {
@@ -69,5 +70,6 @@
       "name": "maker's own tool: snapshots",
       "status": "maker_key"
     }
-  ]
+  ],
+  "id": "ins_competitor-watch"
 }

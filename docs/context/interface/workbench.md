@@ -6,6 +6,7 @@ sources:
   - frontend/src/workbench/WorkbenchPage.vue
   - frontend/src/workbench/routes.ts
   - frontend/src/workbench/api/client.ts
+  - frontend/src/workbench/api/types.gen.ts
   - frontend/src/state/workbench.js
   - frontend/scripts/fixture-plugin.mjs
 related:
@@ -22,7 +23,7 @@ off the dashboard is unchanged.
 
 ## The contract comes first
 
-`contracts/workbench/openapi.yaml` is the agreed shape of the Workbench API, written before the
+`contracts/workbench/openapi.yaml` is the shared Workbench transport draft, written before the
 routes exist so the dashboard, the CLI and the MCP tools are built against one description. It sits
 at the repository root, not under `frontend/`, because the server's tests validate their responses
 against the same file. `contracts/workbench/fixtures/` holds one JSON answer per operation and case,
@@ -73,3 +74,15 @@ terminal source, rejects blocked selections as a whole, and preserves source cod
 while reading current selected rows. It creates a new Run and may incur charges again. Interrupted
 and unstarted work are separate progress categories. These are contract requirements for future
 routes and runtime implementation, not guarantees implemented by the fixture server.
+
+## Install and version boundaries
+
+Stable Install and Trigger IDs accompany human-readable names and keys. Proposed save requests
+require a compare-and-set revision; updates also carry stable identity to prevent a reused name
+from accepting an old edit. Revision zero means create, not unconditional overwrite. The API prefix
+and aggregate Install PUT are still integration decisions: do not implement omission-as-archive
+until replacement has a concurrency guard covering omitted and concurrently added triggers.
+
+A saved Tool version can still be building or awaiting review. Saving, publishing and Hub Listing
+approval are distinct; `latest_version` can be ahead of `serving_version`, and `published_at` can
+be null. None of these contracts requires automatically upgrading an existing Install.

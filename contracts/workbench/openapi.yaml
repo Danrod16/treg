@@ -314,16 +314,19 @@ paths:
     get:
       operationId: listInstalls
       summary: The team's installs
+      parameters: [{ $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' }]
       responses:
         '200':
-          description: Every install of the team with its triggers
+          description: A bounded page of installs with their triggers
           content:
             application/json:
               schema:
                 type: object
-                required: [installs]
+                required: [installs, next_cursor, has_more]
                 properties:
                   installs: { type: array, items: { $ref: '#/components/schemas/Install' } }
+                  next_cursor: { type: [string, 'null'] }
+                  has_more: { type: boolean }
 
   /installs/{installName}:
     parameters: [{ $ref: '#/components/parameters/InstallName' }]
@@ -337,9 +340,17 @@ paths:
       operationId: saveInstall
       summary: Create an install or change its settings
       description: >-
-        Settings carry `config_revision`, not a version: a stale revision is refused. Triggers are
-        matched by `key`; one left out of the list is archived. A webhook's signing secret is
-        returned once, in this response only.
+        Proposed aggregate adapter; replacement semantics remain pending agreement. Do not implement
+        omission-as-archive until the full-trigger-list concurrency boundary is agreed. If replacement
+        is chosen, its compare-and-set must cover concurrent additions, edits and removals, including
+        omitted triggers. Individual trigger revisions alone cannot protect omitted members.
+        config_revision=0 creates only; updates require stable install_id and the current revision.
+        Triggers carry their own stable identity and revision. New runs use the accepted configuration;
+        existing Runs keep snapshots. Changed bindings or versions require compatibility validation.
+        Creation and upgrade never imply automatic trigger activation. A webhook signing secret is
+        returned only at creation; ordinary reads and idempotent replays never redisclose it.
+        Resolve authorized matching idempotency receipts before new-operation revision checks.
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody:
         required: true
         content:
@@ -394,6 +405,7 @@ paths:
     get:
       operationId: listMyTools
       summary: The team's scripts and workflows, with their versions and installs
+      parameters: [{ $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' }]
       responses:
         '200':
           description: Tool definitions owned by the team
@@ -401,9 +413,11 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [tools]
+                required: [tools, next_cursor, has_more]
                 properties:
                   tools: { type: array, items: { $ref: '#/components/schemas/ToolDefinition' } }
+                  next_cursor: { type: [string, 'null'] }
+                  has_more: { type: boolean }
 
   /tools/{toolId}:
     parameters:
@@ -418,7 +432,8 @@ paths:
   /triggers:
     get:
       operationId: listTriggers
-      summary: Every trigger of the team across installs
+      summary: A page of team triggers across installs
+      parameters: [{ $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' }]
       responses:
         '200':
           description: Triggers with the install each belongs to, and the unattended-spend budget
@@ -426,7 +441,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [triggers, unattended]
+                required: [triggers, unattended, next_cursor, has_more]
                 properties:
                   triggers:
                     type: array
@@ -437,6 +452,8 @@ paths:
                           required: [install]
                           properties: { install: { type: string } }
                   unattended: { $ref: '#/components/schemas/UnattendedBudget' }
+                  next_cursor: { type: [string, 'null'] }
+                  has_more: { type: boolean }
 
 components:
   parameters:
@@ -1035,11 +1052,15 @@ components:
 
     ToolVersion:
       type: object
-      required: [version, status, published_at]
+      required: [version, status, build_status, check_status, created_at, published_at]
       properties:
         version: { type: integer, minimum: 1 }
-        status: { type: string, enum: [live, archived] }
-        published_at: { $ref: '#/components/schemas/Timestamp' }
+        status: { type: string, enum: [saved, review, live, archived], description: Release availability; saving does not publish or request a listing }
+        build_status: { type: string, enum: [queued, building, ready, failed] }
+        check_status: { type: string, enum: [not_run, running, passed, failed] }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        created_by: { type: string }
+        published_at: { type: [string, 'null'], format: date-time, description: Null until published; independent of saving a version }
         published_by: { type: string }
         check: { type: [string, 'null'] }
         table_slots: { type: object, additionalProperties: { $ref: '#/components/schemas/TableSlot' } }
@@ -1047,14 +1068,15 @@ components:
 
     ToolDefinition:
       type: object
-      required: [id, name, kind, summary, latest_version, versions]
+      required: [id, name, kind, summary, latest_version, serving_version, versions]
       properties:
         id: { type: string, description: '`<team>.<name>`' }
         name: { type: string }
         kind: { type: string, enum: [script, workflow] }
         summary: { type: string }
         uses: { type: array, items: { type: string } }
-        latest_version: { type: integer, minimum: 1 }
+        latest_version: { type: integer, minimum: 1, description: Latest saved version, including pending or failed builds }
+        serving_version: { type: [integer, 'null'], minimum: 1, description: Approved published version available to other teams; can lag latest_version }
         versions: { type: array, items: { $ref: '#/components/schemas/ToolVersion' } }
         listing: { type: [string, 'null'], enum: [requested, approved, rejected, unlisted, null] }
         installs: { type: array, items: { type: string }, description: The team's installs of this tool }
@@ -1062,8 +1084,9 @@ components:
 
     Trigger:
       type: object
-      required: [key, kind, status, config_revision]
+      required: [id, key, kind, status, config_revision]
       properties:
+        id: { type: string, description: Stable trigger identity; key is the human-readable reference }
         key: { type: string, pattern: '^[a-z0-9][a-z0-9_-]{0,39}$' }
         kind: { type: string, enum: [schedule, webhook] }
         status: { type: string, enum: [active, paused, archived] }
@@ -1080,8 +1103,14 @@ components:
 
     TriggerSave:
       type: object
-      required: [key, kind]
+      additionalProperties: false
+      required: [key, kind, config_revision]
+      allOf:
+        - if: { properties: { config_revision: { minimum: 1 } } }
+          then: { required: [id] }
       properties:
+        id: { type: string, minLength: 1, description: Required on update; must match the existing trigger }
+        config_revision: { type: integer, minimum: 0, description: 0 creates; otherwise compare-and-set against the current trigger revision }
         key: { type: string }
         kind: { type: string, enum: [schedule, webhook] }
         paused: { type: boolean }
@@ -1100,8 +1129,9 @@ components:
 
     Install:
       type: object
-      required: [name, tool, version, latest_version, default_inputs, table_bindings, max_cost_micro, paused, config_revision, triggers, updated_at]
+      required: [id, name, tool, version, latest_version, default_inputs, table_bindings, max_cost_micro, paused, config_revision, triggers, updated_at]
       properties:
+        id: { type: string, description: Stable Install identity independent of the display name }
         name: { $ref: '#/components/schemas/InstallName' }
         tool: { type: string, description: '`<team>.<name>`' }
         version: { type: integer, minimum: 1 }
@@ -1129,14 +1159,22 @@ components:
 
     InstallSave:
       type: object
+      additionalProperties: false
+      required: [config_revision]
+      allOf:
+        - if: { properties: { config_revision: { const: 0 } } }
+          then: { required: [tool] }
+        - if: { properties: { config_revision: { minimum: 1 } } }
+          then: { required: [install_id] }
       properties:
+        install_id: { type: string, minLength: 1, description: Required for updates; prevents stale changes targeting a replacement name }
         tool: { type: string, description: '`<team>.<name>@<version>`; required when creating' }
         default_inputs: { type: object, additionalProperties: true }
         table_bindings: { type: object, additionalProperties: { type: string } }
         max_cost_micro: { $ref: '#/components/schemas/Micro' }
         paused: { type: boolean }
         version: { type: integer, minimum: 1, description: An explicit upgrade; bindings are revalidated }
-        triggers: { type: array, items: { $ref: '#/components/schemas/TriggerSave' } }
+        triggers: { type: array, items: { $ref: '#/components/schemas/TriggerSave' }, description: Proposed aggregate payload; omission/removal rules require agreement before implementation }
         config_revision: { type: integer, minimum: 0, description: 0 when creating; otherwise the revision being changed }
 
     UnattendedBudget:

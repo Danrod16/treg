@@ -29,7 +29,8 @@
         "status": "succeeded",
         "at": "2026-10-12T07:00:00Z",
         "spent_micro": 20000
-      }
+      },
+      "id": "trg_lead-emails_weekly"
     },
     {
       "key": "inbound",
@@ -40,7 +41,8 @@
       "input_overrides": {},
       "config_revision": 1,
       "webhook_url": "https://treg.example/hooks/9f3a1c21",
-      "last_run": null
+      "last_run": null,
+      "id": "trg_lead-emails_inbound"
     }
   ],
   "last_run": {
@@ -72,5 +74,6 @@
       "name": "treg.people.email.verify",
       "status": "treg_key"
     }
-  ]
+  ],
+  "id": "ins_lead-emails"
 }

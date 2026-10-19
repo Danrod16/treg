@@ -18,7 +18,8 @@
         "at": "2026-10-12T07:00:00Z",
         "spent_micro": 20000
       },
-      "install": "lead-emails"
+      "install": "lead-emails",
+      "id": "trg_lead-emails_weekly"
     },
     {
       "key": "inbound",
@@ -30,7 +31,8 @@
       "config_revision": 1,
       "webhook_url": "https://treg.example/hooks/9f3a1c21",
       "last_run": null,
-      "install": "lead-emails"
+      "install": "lead-emails",
+      "id": "trg_lead-emails_inbound"
     },
     {
       "key": "daily",
@@ -50,12 +52,15 @@
         "at": "2026-10-19T07:02:00Z",
         "spent_micro": 200000
       },
-      "install": "competitor-watch"
+      "install": "competitor-watch",
+      "id": "trg_competitor-watch_daily"
     }
   ],
   "unattended": {
     "spent_micro": 6200000,
     "cap_micro": 20000000,
     "period": "month"
-  }
+  },
+  "next_cursor": null,
+  "has_more": false
 }

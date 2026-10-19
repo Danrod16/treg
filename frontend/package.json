@@ -7,7 +7,7 @@
     "build": "vue-tsc --noEmit && vite build && vite build -c vite.agent-setup.config.ts && node scripts/copy-runtime.mjs",
     "test": "vitest run",
     "check": "vue-tsc --noEmit",
-    "contract:types": "openapi-typescript ../contracts/workbench/openapi.yaml -o src/workbench/api/types.gen.ts",
+    "contract:types": "openapi-typescript ../contracts/workbench/openapi.yaml --default-non-nullable false -o src/workbench/api/types.gen.ts",
     "test:e2e": "playwright test",
     "predev": "vite build -c vite.agent-setup.config.ts && node scripts/copy-runtime.mjs"
   },
