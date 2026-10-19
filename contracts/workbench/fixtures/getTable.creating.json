@@ -1,0 +1,31 @@
+{
+  "id": "tbl_01HZX1NEW",
+  "name": "imported-list",
+  "kind": "people",
+  "status": "creating",
+  "row_count": 0,
+  "column_count": 3,
+  "updated_at": "2026-10-19T09:14:08Z",
+  "bound_by": [],
+  "columns": [
+    {
+      "id": "full_name",
+      "name": "Full name",
+      "type": "person_name"
+    },
+    {
+      "id": "company_domain",
+      "name": "Company domain",
+      "type": "domain"
+    },
+    {
+      "id": "title",
+      "name": "Title",
+      "type": "job_title"
+    }
+  ],
+  "metadata_revision": 1,
+  "source": {
+    "file": "imported-list.csv"
+  }
+}

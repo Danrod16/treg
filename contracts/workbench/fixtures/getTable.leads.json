@@ -1,0 +1,70 @@
+{
+  "id": "tbl_01HZX1LEADS",
+  "name": "leads",
+  "kind": "people",
+  "status": "ready",
+  "row_count": 1240,
+  "column_count": 8,
+  "updated_at": "2026-10-19T09:14:08Z",
+  "bound_by": [
+    "lead-emails",
+    "leads.email"
+  ],
+  "columns": [
+    {
+      "id": "full_name",
+      "name": "Full name",
+      "type": "person_name"
+    },
+    {
+      "id": "company_domain",
+      "name": "Company domain",
+      "type": "domain"
+    },
+    {
+      "id": "title",
+      "name": "Title",
+      "type": "job_title"
+    },
+    {
+      "id": "email",
+      "name": "Email",
+      "type": "email",
+      "filled_by": "lead-emails"
+    },
+    {
+      "id": "verified",
+      "name": "Verified",
+      "type": "boolean",
+      "filled_by": "lead-emails"
+    },
+    {
+      "id": "linkedin",
+      "name": "LinkedIn",
+      "type": "linkedin_person",
+      "filled_by": "leads.email"
+    },
+    {
+      "id": "hq",
+      "name": "HQ country",
+      "type": "country",
+      "filled_by": "leads.email"
+    },
+    {
+      "id": "icp",
+      "name": "ICP fit",
+      "type": "text",
+      "filled_by": "q4-accounts.people"
+    }
+  ],
+  "metadata_revision": 7,
+  "source": {
+    "tool": "treg.people.search",
+    "body": {
+      "title": "founder",
+      "industry": "B2B SaaS",
+      "country": "US"
+    },
+    "page": 4
+  }
+}

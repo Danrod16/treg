@@ -1,0 +1,87 @@
+{
+  "tables": [
+    {
+      "id": "tbl_01HZX1LEADS",
+      "name": "leads",
+      "kind": "people",
+      "status": "ready",
+      "row_count": 1240,
+      "column_count": 8,
+      "updated_at": "2026-10-19T09:14:08Z",
+      "bound_by": [
+        "lead-emails",
+        "leads.email"
+      ]
+    },
+    {
+      "id": "tbl_01HZX1COMP",
+      "name": "competitors",
+      "kind": "companies",
+      "status": "ready",
+      "row_count": 48,
+      "column_count": 9,
+      "updated_at": "2026-10-18T09:02:40Z",
+      "bound_by": [
+        "competitor-watch"
+      ]
+    },
+    {
+      "id": "tbl_01HZX1Q4",
+      "name": "q4-accounts",
+      "kind": "companies",
+      "status": "ready",
+      "row_count": 310,
+      "column_count": 22,
+      "updated_at": "2026-10-16T16:40:00Z",
+      "bound_by": [
+        "partner-emails",
+        "q4-accounts.people"
+      ]
+    },
+    {
+      "id": "tbl_01HZX1SEEN",
+      "name": "competitor-watch_seen",
+      "kind": "memory",
+      "status": "ready",
+      "row_count": 1312,
+      "column_count": 3,
+      "updated_at": "2026-10-19T09:02:00Z",
+      "bound_by": [
+        "competitor-watch"
+      ]
+    },
+    {
+      "id": "tbl_auto_calls",
+      "name": "calls",
+      "kind": "automatic",
+      "status": "ready",
+      "row_count": 31002,
+      "column_count": 9,
+      "updated_at": "2026-10-19T09:20:00Z",
+      "bound_by": [],
+      "retention_days": 90
+    },
+    {
+      "id": "tbl_auto_people",
+      "name": "people",
+      "kind": "automatic",
+      "status": "ready",
+      "row_count": 2311,
+      "column_count": 12,
+      "updated_at": "2026-10-19T09:20:00Z",
+      "bound_by": [],
+      "retention_days": 90
+    },
+    {
+      "id": "tbl_auto_companies",
+      "name": "companies",
+      "kind": "automatic",
+      "status": "ready",
+      "row_count": 980,
+      "column_count": 14,
+      "updated_at": "2026-10-19T09:20:00Z",
+      "bound_by": [],
+      "retention_days": 90
+    }
+  ]
+}

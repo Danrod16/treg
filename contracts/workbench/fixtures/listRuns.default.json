@@ -1,0 +1,139 @@
+{
+  "runs": [
+    {
+      "id": "r_8f21",
+      "status": "running",
+      "install": "lead-emails",
+      "tool": "superdesign.lead-emails@3",
+      "tables": [
+        "tbl_01HZX1LEADS"
+      ],
+      "source": "schedule",
+      "trigger": "weekly",
+      "started_by": "trigger weekly",
+      "progress": {
+        "unit": "rows",
+        "total": 1240,
+        "completed": 1180,
+        "succeeded": 1176,
+        "failed": 4,
+        "skipped": 0
+      },
+      "spent_micro": 390000,
+      "max_cost_micro": 5000000,
+      "retry_of_run_id": null,
+      "failed_rows_until": null,
+      "error": null,
+      "started_at": "2026-10-19T07:00:00Z",
+      "finished_at": null
+    },
+    {
+      "id": "r_8f1c",
+      "status": "failed",
+      "install": "competitor-watch",
+      "tool": "maker.competitor-watch@3",
+      "tables": [
+        "tbl_01HZX1COMP",
+        "tbl_01HZX1SEEN"
+      ],
+      "source": "schedule",
+      "trigger": "daily",
+      "started_by": "trigger daily",
+      "progress": {
+        "unit": "rows",
+        "total": 48,
+        "completed": 12,
+        "succeeded": 0,
+        "failed": 12,
+        "skipped": 0
+      },
+      "spent_micro": 200000,
+      "max_cost_micro": 1000000,
+      "retry_of_run_id": null,
+      "failed_rows_until": "2026-11-18T07:02:00Z",
+      "error": "12 rows failed in a row: crawl4ai.scrape answered 429 (paced)",
+      "started_at": "2026-10-19T07:02:00Z",
+      "finished_at": "2026-10-19T07:06:30Z"
+    },
+    {
+      "id": "r_8e90",
+      "status": "partial",
+      "install": "q4-accounts.people",
+      "tool": "treg.enrich.people@1",
+      "tables": [
+        "tbl_01HZX1Q4"
+      ],
+      "source": "manual",
+      "trigger": null,
+      "started_by": "stonex@example.test",
+      "progress": {
+        "unit": "rows",
+        "total": 310,
+        "completed": 310,
+        "succeeded": 305,
+        "failed": 5,
+        "skipped": 0
+      },
+      "spent_micro": 2100000,
+      "max_cost_micro": 3000000,
+      "retry_of_run_id": null,
+      "failed_rows_until": "2026-11-18T14:40:00Z",
+      "error": null,
+      "started_at": "2026-10-18T14:40:00Z",
+      "finished_at": "2026-10-18T15:02:00Z"
+    },
+    {
+      "id": "r_8e71",
+      "status": "succeeded",
+      "install": null,
+      "tool": "superdesign.seo-domain-snapshot@1",
+      "tables": [],
+      "source": "agent",
+      "trigger": null,
+      "started_by": "agent · Claude Code",
+      "progress": {
+        "unit": "rows",
+        "total": 1,
+        "completed": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "spent_micro": 80000,
+      "max_cost_micro": 500000,
+      "retry_of_run_id": null,
+      "failed_rows_until": null,
+      "error": null,
+      "started_at": "2026-10-18T09:05:00Z",
+      "finished_at": "2026-10-18T09:05:41Z"
+    },
+    {
+      "id": "r_8d02",
+      "status": "succeeded",
+      "install": "lead-emails",
+      "tool": "superdesign.lead-emails@3",
+      "tables": [
+        "tbl_01HZX1LEADS"
+      ],
+      "source": "schedule",
+      "trigger": "weekly",
+      "started_by": "trigger weekly",
+      "progress": {
+        "unit": "rows",
+        "total": 3,
+        "completed": 3,
+        "succeeded": 3,
+        "failed": 0,
+        "skipped": 0
+      },
+      "spent_micro": 20000,
+      "max_cost_micro": 5000000,
+      "retry_of_run_id": null,
+      "failed_rows_until": null,
+      "error": null,
+      "started_at": "2026-10-12T07:00:00Z",
+      "finished_at": "2026-10-12T07:00:19Z"
+    }
+  ],
+  "next_cursor": null
+}

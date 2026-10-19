@@ -1,0 +1,695 @@
+openapi: 3.1.0
+info:
+  title: treg Workbench API
+  version: 0.1.0
+  description: >-
+    The team's tables, runs, installs and triggers. The dashboard, the CLI and the MCP tools are
+    three shells over these operations and use the same parameter names. Amounts are integer
+    micro-USD. Lists page with `cursor`; a page carries `next_cursor` when more follows.
+servers:
+  - url: /api/workbench
+
+paths:
+  /tables:
+    get:
+      operationId: listTables
+      summary: The team's tables
+      responses:
+        '200':
+          description: Every table of the team, the automatic ones marked
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tables]
+                properties:
+                  tables: { type: array, items: { $ref: '#/components/schemas/TableSummary' } }
+    post:
+      operationId: createTable
+      summary: Create or import a table
+      description: >-
+        The same key with the same parameters returns the same table and its current state; the same
+        key with different parameters is a conflict. The team's first table may wait while its
+        database is created.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TableCreate' }
+      responses:
+        '200': { description: The table, possibly still creating, content: { application/json: { schema: { $ref: '#/components/schemas/Table' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Invalid' }
+
+  /tables/{tableId}:
+    parameters: [{ $ref: '#/components/parameters/TableId' }]
+    get:
+      operationId: getTable
+      summary: One table, its columns and who binds it
+      responses:
+        '200': { description: The table, content: { application/json: { schema: { $ref: '#/components/schemas/Table' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      operationId: updateTable
+      summary: Rename a table or change its column metadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { $ref: '#/components/schemas/TableName' }
+                columns: { type: array, items: { $ref: '#/components/schemas/ColumnMetadata' } }
+                metadata_revision: { type: integer, minimum: 1 }
+              required: [metadata_revision]
+      responses:
+        '200': { description: The table, content: { application/json: { schema: { $ref: '#/components/schemas/Table' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      operationId: deleteTable
+      summary: Delete a table and its rows
+      description: Refused while an install binds the table; the error names the installs.
+      responses:
+        '204': { description: Deleted }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /tables/{tableId}/rows:
+    parameters: [{ $ref: '#/components/parameters/TableId' }]
+    get:
+      operationId: listRows
+      summary: A page of rows
+      parameters:
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 500, default: 100 } }
+      responses:
+        '200':
+          description: Rows in table order with their bounded metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rows]
+                properties:
+                  rows: { type: array, items: { $ref: '#/components/schemas/Row' } }
+                  next_cursor: { type: [string, 'null'] }
+    post:
+      operationId: writeRows
+      summary: Upsert rows by key, or add only the new ones
+      description: >-
+        Only the fields a row names are written; `null` clears a cell. A row deleted during a run is
+        not recreated. New fields do not add columns here; that is `updateTable`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RowsWrite' }
+      responses:
+        '200': { description: Counts, content: { application/json: { schema: { $ref: '#/components/schemas/WriteResult' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Invalid' }
+
+  /tables/{tableId}/export:
+    parameters: [{ $ref: '#/components/parameters/TableId' }]
+    post:
+      operationId: exportTable
+      summary: Export the table as a file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [format]
+              properties:
+                format: { type: string, enum: [csv, parquet, sqlite] }
+      responses:
+        '202': { description: The export runs in the background and appears in Runs, content: { application/json: { schema: { $ref: '#/components/schemas/RunHandle' } } } }
+
+  /query:
+    post:
+      operationId: query
+      summary: Read-only SQL over the team's tables
+      description: One statement, a row cap and a time limit. Writes go through `writeRows` and runs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sql]
+              properties:
+                sql: { type: string, maxLength: 20000 }
+                limit: { type: integer, minimum: 1, maximum: 1000, default: 1000 }
+      responses:
+        '200': { description: Columns and rows, content: { application/json: { schema: { $ref: '#/components/schemas/QueryResult' } } } }
+        '422': { $ref: '#/components/responses/Invalid' }
+
+  /runs:
+    get:
+      operationId: listRuns
+      summary: Runs of the team, newest first
+      parameters:
+        - { name: install, in: query, schema: { type: string } }
+        - { name: table, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/RunStatus' } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: A page of runs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [runs]
+                properties:
+                  runs: { type: array, items: { $ref: '#/components/schemas/Run' } }
+                  next_cursor: { type: [string, 'null'] }
+
+  /runs/{runId}:
+    parameters: [{ $ref: '#/components/parameters/RunId' }]
+    get:
+      operationId: getRun
+      summary: One run with its progress, spend and a page of its trace
+      parameters:
+        - { name: trace_cursor, in: query, schema: { type: string } }
+      responses:
+        '200': { description: The run, content: { application/json: { schema: { $ref: '#/components/schemas/RunDetail' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /runs/{runId}/stop:
+    parameters: [{ $ref: '#/components/parameters/RunId' }]
+    post:
+      operationId: stopRun
+      summary: Stop a run
+      description: No new calls start; calls in flight finish and settle. The run ends as `stopped`.
+      responses:
+        '200': { description: The run, now stopping, content: { application/json: { schema: { $ref: '#/components/schemas/Run' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /runs/{runId}/retry-failed:
+    parameters: [{ $ref: '#/components/parameters/RunId' }]
+    post:
+      operationId: retryFailedRows
+      summary: Run the failed rows of a finished run again
+      description: A new run over only those rows, linked through `retry_of_run_id`. Available until `failed_rows_until`.
+      responses:
+        '202': { description: The new run, content: { application/json: { schema: { $ref: '#/components/schemas/RunHandle' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /installs:
+    get:
+      operationId: listInstalls
+      summary: The team's installs
+      responses:
+        '200':
+          description: Every install of the team with its triggers
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [installs]
+                properties:
+                  installs: { type: array, items: { $ref: '#/components/schemas/Install' } }
+
+  /installs/{installName}:
+    parameters: [{ $ref: '#/components/parameters/InstallName' }]
+    get:
+      operationId: getInstall
+      summary: One install, its bindings, budget, triggers and credential status
+      responses:
+        '200': { description: The install, content: { application/json: { schema: { $ref: '#/components/schemas/InstallDetail' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: saveInstall
+      summary: Create an install or change its settings
+      description: >-
+        Settings carry `config_revision`, not a version: a stale revision is refused. Triggers are
+        matched by `key`; one left out of the list is archived. A webhook's signing secret is
+        returned once, in this response only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InstallSave' }
+      responses:
+        '200': { description: The install, content: { application/json: { schema: { $ref: '#/components/schemas/InstallDetail' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Invalid' }
+    delete:
+      operationId: removeInstall
+      summary: Remove an install
+      description: Its tables stay; they belong to the team. Runs in progress finish.
+      responses:
+        '204': { description: Removed }
+
+  /installs/{installName}/run:
+    parameters: [{ $ref: '#/components/parameters/InstallName' }]
+    post:
+      operationId: runInstall
+      summary: Run an install now
+      description: >-
+        With `dry_run`, returns the rows that would be processed and an estimate, plus a token to
+        confirm with. Otherwise waits up to `wait_s`; a run that outlives it comes back as a handle.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                input: { type: object, additionalProperties: true }
+                dry_run: { type: boolean, default: false }
+                confirm_token: { type: string }
+                wait_s: { type: integer, minimum: 0, maximum: 60, default: 60 }
+      responses:
+        '200': { description: Finished within the wait, content: { application/json: { schema: { $ref: '#/components/schemas/RunDetail' } } } }
+        '202':
+          description: Still running, or a dry run
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/RunHandle'
+                  - $ref: '#/components/schemas/DryRun'
+        '402': { $ref: '#/components/responses/Budget' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /tools/mine:
+    get:
+      operationId: listMyTools
+      summary: The team's scripts and workflows, with their versions and installs
+      responses:
+        '200':
+          description: Tool definitions owned by the team
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tools]
+                properties:
+                  tools: { type: array, items: { $ref: '#/components/schemas/ToolDefinition' } }
+
+  /tools/{toolId}:
+    parameters:
+      - { name: toolId, in: path, required: true, schema: { type: string }, description: '`<team>.<name>`, optionally `@<version>`' }
+    get:
+      operationId: getTool
+      summary: A tool definition, its versions, table slots and the team's installs of it
+      responses:
+        '200': { description: The tool, content: { application/json: { schema: { $ref: '#/components/schemas/ToolDefinition' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /triggers:
+    get:
+      operationId: listTriggers
+      summary: Every trigger of the team across installs
+      responses:
+        '200':
+          description: Triggers with the install each belongs to, and the unattended-spend budget
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [triggers, unattended]
+                properties:
+                  triggers:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/Trigger'
+                        - type: object
+                          required: [install]
+                          properties: { install: { type: string } }
+                  unattended: { $ref: '#/components/schemas/UnattendedBudget' }
+
+components:
+  parameters:
+    TableId: { name: tableId, in: path, required: true, schema: { type: string } }
+    RunId: { name: runId, in: path, required: true, schema: { type: string } }
+    InstallName: { name: installName, in: path, required: true, schema: { $ref: '#/components/schemas/InstallName' } }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 128 }
+      description: Chosen by the client before the first attempt and reused on retries.
+
+  responses:
+    NotFound: { description: No such thing in this team, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Conflict: { description: The request disagrees with the current state, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Invalid: { description: The request is not valid, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Budget: { description: The run would exceed a budget, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  schemas:
+    Error:
+      type: object
+      required: [detail, code]
+      properties:
+        detail: { type: string, description: What went wrong, for a person }
+        code:
+          type: string
+          description: Stable, for a program
+          enum:
+            - not_found
+            - idempotency_conflict
+            - revision_stale
+            - table_bound
+            - table_creating
+            - database_provisioning
+            - sql_rejected
+            - run_not_running
+            - retry_window_closed
+            - trigger_paused
+            - install_busy
+            - budget_exceeded
+            - unattended_cap_reached
+            - binding_invalid
+            - secret_input_unschedulable
+        hint: { type: string, description: The next useful action, for a person or an agent }
+        installs: { type: array, items: { type: string }, description: With `table_bound`, the installs that bind the table }
+
+    Micro: { type: integer, minimum: 0, description: Integer micro-USD }
+    Timestamp: { type: string, format: date-time }
+    TableName: { type: string, pattern: '^[a-z0-9][a-z0-9_-]{0,79}$' }
+    InstallName: { type: string, pattern: '^[a-z0-9][a-z0-9._-]{0,79}$' }
+
+    ColumnMetadata:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, description: The SQL column }
+        name: { type: string, description: What the header shows }
+        type:
+          type: string
+          description: What the column holds, so tools map to it
+          enum: [text, number, boolean, date, url, email, phone, domain, company_name, person_name, first_name, last_name, job_title, linkedin_person, linkedin_company, country, json]
+        filled_by: { type: [string, 'null'], description: The install that fills this column, when a tool does }
+
+    TableSummary:
+      type: object
+      required: [id, name, kind, status, row_count, column_count, updated_at]
+      properties:
+        id: { type: string }
+        name: { $ref: '#/components/schemas/TableName' }
+        kind: { type: string, enum: [people, companies, memory, automatic, other] }
+        status: { type: string, enum: [creating, ready, updating, failed, deleting] }
+        row_count: { type: integer, minimum: 0 }
+        column_count: { type: integer, minimum: 0 }
+        updated_at: { $ref: '#/components/schemas/Timestamp' }
+        bound_by: { type: array, items: { type: string }, description: Installs that bind this table }
+        retention_days: { type: [integer, 'null'], description: Automatic tables only }
+
+    Table:
+      allOf:
+        - $ref: '#/components/schemas/TableSummary'
+        - type: object
+          required: [columns, metadata_revision]
+          properties:
+            columns: { type: array, items: { $ref: '#/components/schemas/ColumnMetadata' } }
+            metadata_revision: { type: integer, minimum: 1 }
+            source: { type: [object, 'null'], additionalProperties: true, description: The search or file it started from }
+
+    TableCreate:
+      type: object
+      required: [name, columns]
+      properties:
+        name: { $ref: '#/components/schemas/TableName' }
+        kind: { type: string, enum: [people, companies, other], default: other }
+        columns: { type: array, minItems: 1, items: { $ref: '#/components/schemas/ColumnMetadata' } }
+        rows: { type: array, items: { type: object, additionalProperties: true }, description: Initial rows, for an import }
+        source: { type: object, additionalProperties: true }
+
+    RowMeta:
+      type: object
+      description: Bounded provenance per column group; the current value's source and the latest attempt
+      additionalProperties:
+        type: object
+        properties:
+          value_source:
+            type: object
+            properties:
+              run_id: { type: string }
+              call_id: { type: string }
+              install: { type: string }
+              tool: { type: string }
+              provider: { type: string }
+              cost_micro: { $ref: '#/components/schemas/Micro' }
+              confidence: { type: number, minimum: 0, maximum: 1 }
+              at: { $ref: '#/components/schemas/Timestamp' }
+          latest_attempt:
+            type: object
+            required: [status, at]
+            properties:
+              run_id: { type: string }
+              status: { type: string, enum: [queued, running, succeeded, no_result, failed] }
+              error: { type: string }
+              at: { $ref: '#/components/schemas/Timestamp' }
+
+    Row:
+      type: object
+      required: [id, cells]
+      properties:
+        id: { type: string, description: Stable row id (`_treg_row_id`) }
+        cells: { type: object, additionalProperties: true }
+        meta: { $ref: '#/components/schemas/RowMeta' }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        updated_at: { $ref: '#/components/schemas/Timestamp' }
+
+    RowsWrite:
+      type: object
+      required: [mode, rows]
+      properties:
+        mode: { type: string, enum: [upsert, net_new] }
+        key: { type: string, description: The column that identifies a row; `id` when omitted }
+        rows: { type: array, minItems: 1, maxItems: 1000, items: { type: object, additionalProperties: true } }
+
+    WriteResult:
+      type: object
+      required: [written, created, skipped]
+      properties:
+        written: { type: integer, minimum: 0 }
+        created: { type: integer, minimum: 0 }
+        skipped: { type: integer, minimum: 0, description: Rows `net_new` left alone }
+
+    QueryResult:
+      type: object
+      required: [columns, rows, truncated]
+      properties:
+        columns: { type: array, items: { type: string } }
+        rows: { type: array, items: { type: array, items: {} } }
+        truncated: { type: boolean }
+        elapsed_ms: { type: integer, minimum: 0 }
+
+    RunStatus:
+      type: string
+      enum: [queued, running, stopping, finalizing, succeeded, partial, failed, stopped]
+
+    Progress:
+      type: object
+      required: [unit, completed, succeeded, failed, skipped]
+      properties:
+        unit: { type: string, enum: [rows, operations] }
+        total: { type: [integer, 'null'], minimum: 0, description: Unknown until the run has counted its work }
+        completed: { type: integer, minimum: 0 }
+        succeeded: { type: integer, minimum: 0 }
+        failed: { type: integer, minimum: 0, description: Errors only; a row with no result is succeeded }
+        skipped: { type: integer, minimum: 0 }
+
+    RunHandle:
+      type: object
+      required: [run_id, status, progress, spent_micro]
+      properties:
+        run_id: { type: string }
+        status: { $ref: '#/components/schemas/RunStatus' }
+        progress: { $ref: '#/components/schemas/Progress' }
+        spent_micro: { $ref: '#/components/schemas/Micro' }
+        next: { type: array, items: { type: string }, description: Useful next actions, as commands }
+
+    Run:
+      type: object
+      required: [id, status, progress, spent_micro, max_cost_micro, source, started_at]
+      properties:
+        id: { type: string }
+        status: { $ref: '#/components/schemas/RunStatus' }
+        install: { type: [string, 'null'] }
+        tool: { type: [string, 'null'], description: '`<team>.<name>@<version>`, or null for an inline script' }
+        tables: { type: array, items: { type: string }, description: Table ids the run binds }
+        source: { type: string, enum: [manual, api, agent, schedule, webhook, retry, export] }
+        trigger: { type: [string, 'null'], description: The trigger key that started it }
+        started_by: { type: string, description: A member, an agent, or `trigger <key>` }
+        progress: { $ref: '#/components/schemas/Progress' }
+        spent_micro: { $ref: '#/components/schemas/Micro' }
+        max_cost_micro: { $ref: '#/components/schemas/Micro' }
+        retry_of_run_id: { type: [string, 'null'] }
+        failed_rows_until: { type: [string, 'null'], format: date-time, description: Failed rows can be retried until then }
+        error: { type: [string, 'null'] }
+        started_at: { $ref: '#/components/schemas/Timestamp' }
+        finished_at: { type: [string, 'null'], format: date-time }
+
+    TraceStep:
+      type: object
+      required: [row, call, outcome]
+      properties:
+        row: { type: integer, minimum: 1 }
+        row_label: { type: string }
+        call: { type: string }
+        outcome: { type: string, enum: [ok, no_result, failed, queued, replayed] }
+        detail: { type: string }
+        provider: { type: string }
+        cost_micro: { $ref: '#/components/schemas/Micro' }
+        ms: { type: integer, minimum: 0 }
+
+    RunDetail:
+      allOf:
+        - $ref: '#/components/schemas/Run'
+        - type: object
+          required: [trace, log]
+          properties:
+            snapshot:
+              type: object
+              description: What applied when the run started
+              properties:
+                config_revision: { type: integer }
+                version: { type: integer }
+                table_bindings: { type: object, additionalProperties: { type: string } }
+                mode: { type: string }
+                event_key: { type: string }
+            trace: { type: array, items: { $ref: '#/components/schemas/TraceStep' } }
+            trace_next_cursor: { type: [string, 'null'] }
+            log: { type: array, items: { type: string }, maxItems: 200 }
+            output: { description: A short run's answer, when it has one }
+
+    DryRun:
+      type: object
+      required: [dry_run, rows, estimate_micro, confirm_token]
+      properties:
+        dry_run: { const: true }
+        rows: { type: integer, minimum: 0 }
+        estimate_micro: { $ref: '#/components/schemas/Micro' }
+        max_cost_micro: { $ref: '#/components/schemas/Micro' }
+        confirm_token: { type: string }
+        preview: { type: array, items: { type: object, additionalProperties: true }, maxItems: 5 }
+
+    TableSlot:
+      type: object
+      required: [access]
+      properties:
+        access: { type: string, enum: [read, write, read_write] }
+        read: { type: array, items: { type: string } }
+        write: { type: array, items: { type: string } }
+
+    ToolVersion:
+      type: object
+      required: [version, status, published_at]
+      properties:
+        version: { type: integer, minimum: 1 }
+        status: { type: string, enum: [live, archived] }
+        published_at: { $ref: '#/components/schemas/Timestamp' }
+        published_by: { type: string }
+        check: { type: [string, 'null'] }
+        table_slots: { type: object, additionalProperties: { $ref: '#/components/schemas/TableSlot' } }
+        install_count: { type: integer, minimum: 0 }
+
+    ToolDefinition:
+      type: object
+      required: [id, name, kind, summary, latest_version, versions]
+      properties:
+        id: { type: string, description: '`<team>.<name>`' }
+        name: { type: string }
+        kind: { type: string, enum: [script, workflow] }
+        summary: { type: string }
+        uses: { type: array, items: { type: string } }
+        latest_version: { type: integer, minimum: 1 }
+        versions: { type: array, items: { $ref: '#/components/schemas/ToolVersion' } }
+        listing: { type: [string, 'null'], enum: [requested, approved, rejected, unlisted, null] }
+        installs: { type: array, items: { type: string }, description: The team's installs of this tool }
+        health: { type: string, enum: [ok, failing, unknown] }
+
+    Trigger:
+      type: object
+      required: [key, kind, status, config_revision]
+      properties:
+        key: { type: string, pattern: '^[a-z0-9][a-z0-9_-]{0,39}$' }
+        kind: { type: string, enum: [schedule, webhook] }
+        status: { type: string, enum: [active, paused, archived] }
+        pause_reason: { type: [string, 'null'], enum: [manual, failed, partial, budget, unattended_cap, permission, null] }
+        pause_detail: { type: [string, 'null'] }
+        input_overrides: { type: object, additionalProperties: true }
+        config_revision: { type: integer, minimum: 1 }
+        cron: { type: string, description: Five fields }
+        timezone: { type: string, description: IANA }
+        mode: { type: string, enum: [all, net_new] }
+        next_fire_at: { type: [string, 'null'], format: date-time }
+        webhook_url: { type: string }
+        last_run: { type: [object, 'null'], properties: { run_id: { type: string }, status: { $ref: '#/components/schemas/RunStatus' }, at: { $ref: '#/components/schemas/Timestamp' }, spent_micro: { $ref: '#/components/schemas/Micro' } } }
+
+    TriggerSave:
+      type: object
+      required: [key, kind]
+      properties:
+        key: { type: string }
+        kind: { type: string, enum: [schedule, webhook] }
+        paused: { type: boolean }
+        input_overrides: { type: object, additionalProperties: true }
+        cron: { type: string }
+        timezone: { type: string }
+        mode: { type: string, enum: [all, net_new] }
+
+    CredentialStatus:
+      type: object
+      required: [name, status]
+      properties:
+        name: { type: string }
+        status: { type: string, enum: [set, missing, treg_key, maker_key, expired] }
+        set_with: { type: string, description: The command the person runs; never the value }
+
+    Install:
+      type: object
+      required: [name, tool, version, latest_version, default_inputs, table_bindings, max_cost_micro, paused, config_revision, triggers, updated_at]
+      properties:
+        name: { $ref: '#/components/schemas/InstallName' }
+        tool: { type: string, description: '`<team>.<name>`' }
+        version: { type: integer, minimum: 1 }
+        latest_version: { type: integer, minimum: 1 }
+        origin: { type: string, enum: [own, hub, builtin] }
+        default_inputs: { type: object, additionalProperties: true }
+        table_bindings: { type: object, additionalProperties: { type: string }, description: Slot name to table id }
+        max_cost_micro: { $ref: '#/components/schemas/Micro' }
+        paused: { type: boolean }
+        config_revision: { type: integer, minimum: 1 }
+        triggers: { type: array, items: { $ref: '#/components/schemas/Trigger' } }
+        last_run: { type: [object, 'null'], properties: { run_id: { type: string }, status: { $ref: '#/components/schemas/RunStatus' }, at: { $ref: '#/components/schemas/Timestamp' } } }
+        updated_at: { $ref: '#/components/schemas/Timestamp' }
+
+    InstallDetail:
+      allOf:
+        - $ref: '#/components/schemas/Install'
+        - type: object
+          required: [table_slots, credentials]
+          properties:
+            table_slots: { type: object, additionalProperties: { $ref: '#/components/schemas/TableSlot' } }
+            input_schema: { type: object, additionalProperties: true, description: The version's declared inputs }
+            credentials: { type: array, items: { $ref: '#/components/schemas/CredentialStatus' } }
+            webhook_secrets: { type: object, additionalProperties: { type: string }, description: Present once, in the saveInstall response that created a webhook }
+
+    InstallSave:
+      type: object
+      properties:
+        tool: { type: string, description: '`<team>.<name>@<version>`; required when creating' }
+        default_inputs: { type: object, additionalProperties: true }
+        table_bindings: { type: object, additionalProperties: { type: string } }
+        max_cost_micro: { $ref: '#/components/schemas/Micro' }
+        paused: { type: boolean }
+        version: { type: integer, minimum: 1, description: An explicit upgrade; bindings are revalidated }
+        triggers: { type: array, items: { $ref: '#/components/schemas/TriggerSave' } }
+        config_revision: { type: integer, minimum: 0, description: 0 when creating; otherwise the revision being changed }
+
+    UnattendedBudget:
+      type: object
+      required: [spent_micro, cap_micro, period]
+      properties:
+        spent_micro: { $ref: '#/components/schemas/Micro' }
+        cap_micro: { $ref: '#/components/schemas/Micro' }
+        period: { type: string, enum: [month] }

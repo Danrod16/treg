@@ -1,0 +1,27 @@
+{
+  "id": "r_8f21",
+  "status": "stopping",
+  "install": "lead-emails",
+  "tool": "superdesign.lead-emails@3",
+  "tables": [
+    "tbl_01HZX1LEADS"
+  ],
+  "source": "schedule",
+  "trigger": "weekly",
+  "started_by": "trigger weekly",
+  "progress": {
+    "unit": "rows",
+    "total": 1240,
+    "completed": 1180,
+    "succeeded": 1176,
+    "failed": 4,
+    "skipped": 0
+  },
+  "spent_micro": 390000,
+  "max_cost_micro": 5000000,
+  "retry_of_run_id": null,
+  "failed_rows_until": null,
+  "error": null,
+  "started_at": "2026-10-19T07:00:00Z",
+  "finished_at": null
+}

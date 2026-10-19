@@ -1,0 +1,16 @@
+{
+  "run_id": "r_8f30",
+  "status": "queued",
+  "progress": {
+    "unit": "rows",
+    "total": 1240,
+    "completed": 0,
+    "succeeded": 0,
+    "failed": 0,
+    "skipped": 0
+  },
+  "spent_micro": 0,
+  "next": [
+    "treg run status r_8f30"
+  ]
+}
