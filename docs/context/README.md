@@ -62,6 +62,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 | [Tool justifications for the ChatGPT plugin submission](interface/skill-openai-tool-justifications.md) | reference | — |
 | [The shippable tools-registry skill (3 personas)](interface/skill.md) | shipped | skill.md, SKILL.md, SKILL.md, SKILL.md, … |
 | [Web Arena — private comparisons and live provider observations](interface/web-arena.md) | gated | web_arena.py, web_arena_scores.py, web_arena.py, web_arena_quality.py, … |
+| [The Workbench — tables, runs and triggers in the dashboard](interface/workbench.md) | shell behind TREG_WORKBENCH_ENABLED; the tabs fill in over the next changes | openapi.yaml, WorkbenchPage.vue, routes.ts, client.ts, … |
 
 ## Ops (deploy, scale)
 

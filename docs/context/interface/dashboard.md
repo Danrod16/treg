@@ -63,6 +63,7 @@ this page keeps what no single file shows. The look follows the root `design.md`
 | Your own tools | `#tools`, `#secrets`, `#resources` | `ToolsPage.vue`, `SecretsPage.vue`, `TeamResourcesPage.vue` |
 | A shared skill or tool | `/app/skills/<name>`, `/app/tools/<name>` | `DetailPage.vue` |
 | Activity, Team, Hub, Referrals, Admin; find a tool | `#activity`, `#orgs`, `#hub`, `#referrals`, `#admin`; public `/search` | the matching page, `SearchPage.vue` |
+| Workbench: tables, runs, triggers (behind `meta.workbench`) | `#workbench/<tab>[/<id>]` | `workbench/WorkbenchPage.vue` ([workbench](workbench.md)) |
 
 ## Rules every change keeps
 
