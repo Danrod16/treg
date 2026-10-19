@@ -47,6 +47,11 @@ key or retries an uncertain operation on its own. Success types include every de
 intercept the same paths with Playwright and read the same files. There is no second copy of the
 data anywhere.
 
+The middleware returns the declared status for each fixture and paginates its finite arrays. It
+does not implement database transactions, authorization, Run admission or idempotency. The
+development-only `X-Treg-Fixture-Case` header selects ready/replay/terminal cases explicitly; it is
+not a production API feature. A long response wait never selects a terminal fixture implicitly.
+
 ## Addresses
 
 `#workbench/<tab>` with the table, run or cell carried the way `routes.ts` parses and prints it.
