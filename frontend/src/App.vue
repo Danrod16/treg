@@ -14,7 +14,8 @@ const {
   detail: DetailPage, secrets: SecretsPage, resources: TeamResourcesPage, orgs: TeamPage, activity: ActivityPage,
   admin: AdminPage, start: GettingStartedPage, referrals: ReferralsPage, hub: HubPage, run: HubRunPage, help: HelpPage, workbench: WorkbenchPage, wbtool: WorkbenchToolPage, wbinstall: WorkbenchInstallPage,
 } = pages
-export default { ...controller, components: { ...controller.components, ...dialogs, TeamResourcesPage, CatalogPage, ConnectionsPage, ProviderPage, PlatformPage, ToolsPage, DetailPage, SecretsPage, TeamPage, ActivityPage, AdminPage, GettingStartedPage, ReferralsPage, HelpPage, SearchPage, HubPage, HubRunPage, WorkbenchPage, WorkbenchToolPage, WorkbenchInstallPage, SignedOutPage, BrandMark, PublicNavigation, LandingNavigation, DashboardNavigation, ToolsScope, SignInDialog } }
+const TOOLS_VIEWS = ['catalog','platform','provider','tools','secrets','resources','detail','hub','run','wbtool','wbinstall']
+export default { ...controller, computed: { ...controller.computed, toolsMerged() { return this.workbenchOn && this.authed && !this.publicCatalog && TOOLS_VIEWS.includes(this.view) } }, components: { ...controller.components, ...dialogs, TeamResourcesPage, CatalogPage, ConnectionsPage, ProviderPage, PlatformPage, ToolsPage, DetailPage, SecretsPage, TeamPage, ActivityPage, AdminPage, GettingStartedPage, ReferralsPage, HelpPage, SearchPage, HubPage, HubRunPage, WorkbenchPage, WorkbenchToolPage, WorkbenchInstallPage, SignedOutPage, BrandMark, PublicNavigation, LandingNavigation, DashboardNavigation, ToolsScope, SignInDialog } }
 </script>
 
 <template>
@@ -46,7 +47,7 @@ export default { ...controller, components: { ...controller.components, ...dialo
     <div v-if="startCopyError" class="rd-copy-error" role="alert">{{startCopyError}}<br><button class="btn sm" @click="startCopyError=''">Dismiss</button></div>
     <span class="rd-sr-only" role="status">{{startCopied ? 'Copied to clipboard' : ''}}</span>
     <div class="layout" :class="{solo:publicCatalog}">
-      <main id="maincontent" tabindex="-1" :class="{flush:view==='find'}">
+      <main id="maincontent" tabindex="-1" :class="{flush:view==='find', 'tools-merged': toolsMerged}">
         <div v-if="err" class="banner">{{err}}</div>
         <div v-if="pendingInvites.length" class="banner" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <span>You've been invited:</span>
@@ -57,7 +58,7 @@ export default { ...controller, components: { ...controller.components, ...dialo
         </div>
 
         <!-- With the Workbench on, Catalog, Your own tools and the Hub are three scopes of one Tools entry -->
-        <ToolsScope v-if="workbenchOn && authed && !publicCatalog && ['catalog','platform','provider','tools','secrets','resources','detail','hub','run','wbtool','wbinstall'].includes(view)" />
+        <ToolsScope v-if="toolsMerged" />
         <!-- CATALOG: every platform, by category -->
         <CatalogPage v-if="view==='catalog'" />
 
