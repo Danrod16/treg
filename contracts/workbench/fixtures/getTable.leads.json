@@ -12,49 +12,73 @@
   ],
   "columns": [
     {
-      "id": "full_name",
+      "id": "col_full_name",
       "name": "Full name",
-      "type": "person_name"
+      "type": "person_name",
+      "sql_name": "full_name",
+      "storage_type": "TEXT",
+      "nullable": true
     },
     {
-      "id": "company_domain",
+      "id": "col_company_domain",
       "name": "Company domain",
-      "type": "domain"
+      "type": "domain",
+      "sql_name": "company_domain",
+      "storage_type": "TEXT",
+      "nullable": true
     },
     {
-      "id": "title",
+      "id": "col_title",
       "name": "Title",
-      "type": "job_title"
+      "type": "job_title",
+      "sql_name": "title",
+      "storage_type": "TEXT",
+      "nullable": true
     },
     {
-      "id": "email",
+      "id": "col_email",
       "name": "Email",
       "type": "email",
-      "filled_by": "lead-emails"
+      "filled_by": "lead-emails",
+      "sql_name": "email",
+      "storage_type": "TEXT",
+      "nullable": true
     },
     {
-      "id": "verified",
+      "id": "col_verified",
       "name": "Verified",
       "type": "boolean",
-      "filled_by": "lead-emails"
+      "filled_by": "lead-emails",
+      "sql_name": "verified",
+      "storage_type": "TEXT",
+      "nullable": true
     },
     {
-      "id": "linkedin",
+      "id": "col_linkedin",
       "name": "LinkedIn",
       "type": "linkedin_person",
-      "filled_by": "leads.email"
+      "filled_by": "leads.email",
+      "sql_name": "linkedin",
+      "storage_type": "TEXT",
+      "nullable": true
     },
     {
-      "id": "hq",
+      "id": "col_hq",
       "name": "HQ country",
       "type": "country",
-      "filled_by": "leads.email"
+      "filled_by": "leads.email",
+      "sql_name": "hq",
+      "storage_type": "TEXT",
+      "nullable": true
     },
     {
-      "id": "icp",
+      "id": "col_icp",
       "name": "ICP fit",
       "type": "text",
-      "filled_by": "q4-accounts.people"
+      "filled_by": "q4-accounts.people",
+      "sql_name": "icp",
+      "storage_type": "TEXT",
+      "nullable": true
     }
   ],
   "metadata_revision": 7,
@@ -66,5 +90,8 @@
       "country": "US"
     },
     "page": 4
-  }
+  },
+  "sql_name": "leads",
+  "database_generation": 1,
+  "schema_version": 1
 }

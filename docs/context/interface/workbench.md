@@ -46,3 +46,17 @@ data anywhere.
 `#workbench/<tab>` with the table, run or cell carried the way `routes.ts` parses and prints it.
 The view is in both hash whitelists, like every other view ([dashboard](dashboard.md)), and
 `syncTabUrl` keeps the address current as the tab or the open object changes.
+
+## Table contract boundaries
+
+The contract distinguishes the verified database generation and schema version from the metadata
+revision and each row's revision. Ready tables require verified versions; creating tables can
+return null. `columns` is the API projection of `TableDoc.column_metadata`; column IDs survive SQL
+renames. `Row.cells` contains business values, while write requests use explicit `values` envelopes.
+
+Presentation edits address stable column IDs. Physical changes use separate maintenance operations,
+never business Runs. Creation defines structure; imports use bounded writes after readiness.
+Conditional patch never recreates a deleted row. A matching committed write receipt precedes new
+schema/row revision checks, after authorization, maintenance, generation and expiry checks. Expired
+or unknown outcomes cannot be retried with an automatically replaced identity. The write-key wire
+encoding and recovery window must be agreed before SDK writes ship.

@@ -15,7 +15,7 @@ export interface paths {
         get: operations["listTables"];
         put?: never;
         /**
-         * Create or import a table
+         * Create a table structure; import rows separately after it is ready
          * @description The same key with the same parameters returns the same table and its current state; the same key with different parameters is a conflict. The team's first table may wait while its database is created.
          */
         post: operations["createTable"];
@@ -45,7 +45,10 @@ export interface paths {
         delete: operations["deleteTable"];
         options?: never;
         head?: never;
-        /** Rename a table or change its column metadata */
+        /**
+         * Edit presentation metadata without changing the physical schema
+         * @description Only labels and display names change. Stable column IDs and SQL names stay fixed. Check current authorization; replay the recorded mutation before checking the revision for a new mutation. Block edits during schema maintenance. Semantic changes affecting execution require compatibility validation through schema maintenance.
+         */
         patch: operations["updateTable"];
         trace?: never;
     };
@@ -58,14 +61,80 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** A page of rows */
+        /**
+         * A bounded keyset page of rows
+         * @description Cursors bind the team, table, query, schema version and database generation. Changed or expired cursors fail explicitly; never silently restart. This is not a database snapshot.
+         */
         get: operations["listRows"];
         put?: never;
         /**
-         * Upsert rows by key, or add only the new ones
-         * @description Only the fields a row names are written; `null` clears a cell. A row deleted during a run is not recreated. New fields do not add columns here; that is `updateTable`.
+         * Insert, conditionally patch or upsert, or insert only net-new rows
+         * @description One bounded atomic batch. Omitted fields stay unchanged; null clears a cell. Unknown columns and duplicate targets fail. Patch never recreates a missing row. Upsert requires an explicit conflict policy and a matching revision for an existing target. Check authorization, maintenance and generation before receipts. Under the same Turso transaction, serialize the key, recheck its fixed deadline, then replay a matching receipt BEFORE new-operation schema and row revision checks. Values, revisions and the receipt commit together. Changed payloads return idempotency_conflict. An uncertain commit is write_outcome_unknown, not rollback; retry the frozen payload and key. An expired key returns operation_expired even after receipt cleanup; never replace its identity to retry.
          */
         post: operations["writeRows"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tables/{tableId}/rows/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tableId: components["parameters"]["TableId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete rows with the same atomic receipt protocol as writeRows
+         * @description Existing rows require matching revisions. Absent rows report unchanged. Never partially commit a conflicting batch.
+         */
+        post: operations["deleteRows"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tables/{tableId}/schema-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tableId: components["parameters"]["TableId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate or submit a fixed physical schema change
+         * @description A preflight creates no operation and reserves no version. Formal admission repeats checks atomically, refuses incompatible bindings or unfinished Runs, enters maintenance and drains admitted requests. DDL uncertainty requires reconciliation of the same intent. Never reopen on lease expiry or replay old-generation DDL against a restored database.
+         */
+        post: operations["createSchemaChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/table-operations/{operationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        /** Inspect creation or schema maintenance; this is not a business Run */
+        get: operations["getTableOperation"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -102,7 +171,7 @@ export interface paths {
         put?: never;
         /**
          * Read-only SQL over the team's tables
-         * @description One statement, a row cap and a time limit. Writes go through `writeRows` and runs.
+         * @description One authorized read-only statement with bound parameters, a row cap, byte cap and deadline. Internal receipt/control tables are inaccessible. Dependent Script queries must carry the captured generation and are restricted to authorized bindings. Writes use writeRows.
          */
         post: operations["query"];
         delete?: never;
@@ -322,7 +391,14 @@ export interface components {
              * @description Stable, for a program
              * @enum {string}
              */
-            code: "not_found" | "idempotency_conflict" | "revision_stale" | "table_bound" | "table_creating" | "database_provisioning" | "sql_rejected" | "run_not_running" | "retry_window_closed" | "trigger_paused" | "install_busy" | "budget_exceeded" | "unattended_cap_reached" | "binding_invalid" | "secret_input_unschedulable";
+            code: "not_found" | "idempotency_conflict" | "revision_stale" | "metadata_revision_conflict" | "schema_version_conflict" | "database_generation_conflict" | "row_revision_conflict" | "row_missing" | "schema_dependency_conflict" | "table_in_use" | "table_maintenance" | "invalid_cursor" | "cursor_expired" | "operation_expired" | "write_outcome_unknown" | "table_bound" | "table_creating" | "database_provisioning" | "sql_rejected" | "run_not_running" | "retry_window_closed" | "trigger_paused" | "install_busy" | "budget_exceeded" | "unattended_cap_reached" | "binding_invalid" | "secret_input_unschedulable";
+            /** @description False only when non-commit is confirmed; omitted for unknown outcomes */
+            committed?: boolean;
+            conflicts?: {
+                row_id: string;
+                expected_revision: number;
+                current_revision: number | null;
+            }[];
             /** @description The next useful action */
             hint?: string;
             /** @description With `table_bound` */
@@ -334,9 +410,22 @@ export interface components {
         Timestamp: string;
         TableName: string;
         InstallName: string;
+        /** @description Server-validated SQL identifier; reserved internal names are unavailable */
+        SqlName: string;
+        ColumnCreate: {
+            sql_name: components["schemas"]["SqlName"];
+            label?: string;
+            /** @enum {string} */
+            storage_type: "TEXT" | "INTEGER" | "REAL" | "BLOB";
+            nullable: boolean;
+        };
         ColumnMetadata: {
-            /** @description The SQL column */
+            /** @description Stable column identity; unchanged by SQL renames */
             id: string;
+            sql_name: components["schemas"]["SqlName"];
+            /** @enum {string} */
+            storage_type: "TEXT" | "INTEGER" | "REAL" | "BLOB";
+            nullable: boolean;
             /** @description What the header shows */
             name: string;
             /**
@@ -350,6 +439,12 @@ export interface components {
         TableSummary: {
             id: string;
             name: components["schemas"]["TableName"];
+            sql_name: components["schemas"]["SqlName"];
+            /** @description Last verified database incarnation; null until verified */
+            database_generation: number | null;
+            /** @description Last verified physical schema; null until verified */
+            schema_version: number | null;
+            metadata_revision: number;
             /** @enum {string} */
             kind: "people" | "companies" | "memory" | "automatic" | "other";
             /** @enum {string} */
@@ -361,10 +456,9 @@ export interface components {
             bound_by?: string[];
             /** @description Automatic tables only */
             retention_days?: number | null;
-        };
+        } & unknown;
         Table: components["schemas"]["TableSummary"] & {
             columns: components["schemas"]["ColumnMetadata"][];
-            metadata_revision: number;
             /** @description The search or file it started from */
             source?: {
                 [key: string]: unknown;
@@ -377,13 +471,74 @@ export interface components {
              * @enum {string}
              */
             kind: "people" | "companies" | "other";
-            columns: components["schemas"]["ColumnMetadata"][];
-            /** @description Initial rows */
-            rows?: {
-                [key: string]: unknown;
-            }[];
+            columns: components["schemas"]["ColumnCreate"][];
             source?: {
                 [key: string]: unknown;
+            };
+        };
+        TableUpdate: {
+            expected_metadata_revision: number;
+            name?: components["schemas"]["TableName"];
+            column_updates?: {
+                column_id: string;
+                label: string;
+            }[];
+        };
+        SchemaChange: {
+            /** @constant */
+            op: "add_column";
+            column: components["schemas"]["ColumnCreate"];
+        } | {
+            /** @constant */
+            op: "drop_column";
+            column_id: string;
+        } | {
+            /** @constant */
+            op: "rename_column";
+            column_id: string;
+            sql_name: components["schemas"]["SqlName"];
+        } | {
+            /** @constant */
+            op: "change_type";
+            column_id: string;
+            /** @enum {string} */
+            storage_type: "TEXT" | "INTEGER" | "REAL" | "BLOB";
+        };
+        SchemaChangeRequest: {
+            database_generation: number;
+            expected_schema_version: number;
+            expected_metadata_revision: number;
+            /** @default false */
+            dry_run: boolean;
+            changes: components["schemas"]["SchemaChange"][];
+        };
+        SchemaPreflight: {
+            /** @constant */
+            dry_run: true;
+            changes: components["schemas"]["SchemaChange"][];
+            conflicts: components["schemas"]["Error"][];
+        };
+        TableCreation: {
+            table: components["schemas"]["Table"];
+            operation: components["schemas"]["TableOperation"];
+        };
+        TableOperation: {
+            /** @constant */
+            kind: "table_operation";
+            operation_id: string;
+            table_id: string;
+            /** @enum {string} */
+            type: "create_table" | "alter_table";
+            /** @enum {string} */
+            status: "pending" | "running" | "succeeded" | "failed";
+            /** @description Includes provisioning */
+            phase: string;
+            base_schema_version?: number | null;
+            target_schema_version?: number;
+            applied_schema_version?: number | null;
+            error?: components["schemas"]["Error"];
+            links: {
+                self: string;
             };
         };
         /** @description Bounded provenance per column group; the current value's source and the latest attempt */
@@ -411,6 +566,9 @@ export interface components {
         Row: {
             /** @description Stable row id (`_treg_row_id`) */
             id: string;
+            /** @description Platform-managed row revision for compare-and-set writes */
+            revision: number;
+            /** @description Business values; internal _treg_ fields are not writable */
             cells: {
                 [key: string]: unknown;
             };
@@ -418,22 +576,58 @@ export interface components {
             created_at?: components["schemas"]["Timestamp"];
             updated_at?: components["schemas"]["Timestamp"];
         };
-        RowsWrite: {
-            /** @enum {string} */
-            mode: "upsert" | "net_new";
-            /** @description The column that identifies a row; `id` when omitted */
-            key?: string;
-            rows: {
+        RowWrite: {
+            id?: string;
+            expected_revision?: number;
+            values: {
                 [key: string]: unknown;
+            };
+        };
+        RowsWrite: {
+            database_generation: number;
+            expected_schema_version: number;
+            /** @enum {string} */
+            mode: "insert" | "patch" | "upsert" | "net_new";
+            /** @description Declared unique business key; otherwise match stable row id */
+            key?: string;
+            /**
+             * @description Required for upsert; never bypasses revision checks
+             * @enum {string}
+             */
+            on_conflict?: "error" | "update_if_revision_matches";
+            rows: components["schemas"]["RowWrite"][];
+        } & (unknown & unknown);
+        RowsDelete: {
+            database_generation: number;
+            expected_schema_version: number;
+            rows: {
+                id: string;
+                expected_revision: number;
             }[];
         };
         WriteResult: {
-            written: number;
-            created: number;
-            /** @description Rows `net_new` left alone */
-            skipped: number;
+            operation_id: string;
+            table_id: string;
+            database_generation: number;
+            schema_version: number;
+            /** @constant */
+            committed: true;
+            counts: {
+                inserted: number;
+                updated: number;
+                skipped: number;
+                deleted: number;
+            };
+            rows: {
+                id: string;
+                /** @enum {string} */
+                status: "inserted" | "updated" | "skipped" | "deleted" | "unchanged";
+                /** @description Null when the row is absent after deletion */
+                revision: number | null;
+            }[];
         };
         QueryResult: {
+            database_generation: number;
             columns: string[];
             rows: unknown[][];
             truncated: boolean;
@@ -714,6 +908,11 @@ export interface components {
         };
     };
     parameters: {
+        /** @description Opaque continuation bound to the team and unchanged query */
+        Cursor: string;
+        Limit: number;
+        /** @description Immutable versioned timestamp-and-random identity with a fixed acceptance deadline. Exact encoding, recovery window and clock skew remain to be agreed before SDK writes ship. Preserve it across retries; expired identities never become fresh writes after receipt cleanup. */
+        DataWriteKey: string;
         TableId: string;
         RunId: string;
         InstallName: components["schemas"]["InstallName"];
@@ -728,14 +927,18 @@ export type $defs = Record<string, never>;
 export interface operations {
     listTables: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Opaque continuation bound to the team and unchanged query */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Every table of the team, the automatic ones marked */
+            /** @description A bounded page of accessible tables */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -743,6 +946,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         tables: components["schemas"]["TableSummary"][];
+                        next_cursor: string | null;
+                        has_more: boolean;
                     };
                 };
             };
@@ -764,13 +969,31 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The table */
+            /** @description Replay of completed creation with the current table */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Table"];
+                    "application/json": components["schemas"]["TableCreation"];
+                };
+            };
+            /** @description Created and verified */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableCreation"];
+                };
+            };
+            /** @description Same durable creation intent is pending */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableCreation"];
                 };
             };
             409: components["responses"]["Conflict"];
@@ -824,7 +1047,10 @@ export interface operations {
     updateTable: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description Chosen by the client before the first attempt and reused on retries. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
             path: {
                 tableId: components["parameters"]["TableId"];
             };
@@ -832,11 +1058,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    name?: components["schemas"]["TableName"];
-                    columns?: components["schemas"]["ColumnMetadata"][];
-                    metadata_revision: number;
-                };
+                "application/json": components["schemas"]["TableUpdate"];
             };
         };
         responses: {
@@ -855,7 +1077,8 @@ export interface operations {
     listRows: {
         parameters: {
             query?: {
-                cursor?: string;
+                /** @description Opaque continuation bound to the team and unchanged query */
+                cursor?: components["parameters"]["Cursor"];
                 limit?: number;
             };
             header?: never;
@@ -873,8 +1096,12 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        table_id: string;
+                        database_generation: number;
+                        schema_version: number;
+                        has_more: boolean;
                         rows: components["schemas"]["Row"][];
-                        next_cursor?: string | null;
+                        next_cursor: string | null;
                     };
                 };
             };
@@ -883,7 +1110,10 @@ export interface operations {
     writeRows: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description Immutable versioned timestamp-and-random identity with a fixed acceptance deadline. Exact encoding, recovery window and clock skew remain to be agreed before SDK writes ship. Preserve it across retries; expired identities never become fresh writes after receipt cleanup. */
+                "Idempotency-Key": components["parameters"]["DataWriteKey"];
+            };
             path: {
                 tableId: components["parameters"]["TableId"];
             };
@@ -895,7 +1125,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Counts */
+            /** @description Original committed receipt */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -906,6 +1136,100 @@ export interface operations {
             };
             409: components["responses"]["Conflict"];
             422: components["responses"]["Invalid"];
+        };
+    };
+    deleteRows: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Immutable versioned timestamp-and-random identity with a fixed acceptance deadline. Exact encoding, recovery window and clock skew remain to be agreed before SDK writes ship. Preserve it across retries; expired identities never become fresh writes after receipt cleanup. */
+                "Idempotency-Key": components["parameters"]["DataWriteKey"];
+            };
+            path: {
+                tableId: components["parameters"]["TableId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RowsDelete"];
+            };
+        };
+        responses: {
+            /** @description Original committed receipt */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WriteResult"];
+                };
+            };
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["Invalid"];
+        };
+    };
+    createSchemaChange: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Chosen by the client before the first attempt and reused on retries. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                tableId: components["parameters"]["TableId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchemaChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Preflight or recorded completed operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchemaPreflight"] | components["schemas"]["TableOperation"];
+                };
+            };
+            /** @description Accepted maintenance operation */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableOperation"];
+                };
+            };
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["Invalid"];
+        };
+    };
+    getTableOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current operation and outcome */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableOperation"];
+                };
+            };
+            404: components["responses"]["NotFound"];
         };
     };
     exportTable: {
@@ -947,6 +1271,10 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    database_generation?: number;
+                    params?: {
+                        [key: string]: string | number | boolean | null;
+                    };
                     sql: string;
                     /** @default 1000 */
                     limit?: number;

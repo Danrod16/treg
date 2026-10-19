@@ -5,7 +5,9 @@ info:
   description: >-
     The team's tables, runs, installs and triggers. The dashboard, the CLI and the MCP tools are
     three shells over these operations and use the same parameter names. Amounts are integer
-    micro-USD. Lists page with `cursor`; a page carries `next_cursor` when more follows.
+    micro-USD. Lists use bounded cursor pages with `next_cursor` and `has_more`.
+    This is a proposed transport contract; backend routes are not implemented. The
+    `/api/workbench` prefix and aggregate Install PUT remain pending integration decisions.
 servers:
   - url: /api/workbench
 
@@ -14,19 +16,22 @@ paths:
     get:
       operationId: listTables
       summary: The team's tables
+      parameters: [{ $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' }]
       responses:
         '200':
-          description: Every table of the team, the automatic ones marked
+          description: A bounded page of accessible tables
           content:
             application/json:
               schema:
                 type: object
-                required: [tables]
+                required: [tables, next_cursor, has_more]
                 properties:
                   tables: { type: array, items: { $ref: '#/components/schemas/TableSummary' } }
+                  next_cursor: { type: [string, 'null'] }
+                  has_more: { type: boolean }
     post:
       operationId: createTable
-      summary: Create or import a table
+      summary: Create a table structure; import rows separately after it is ready
       description: >-
         The same key with the same parameters returns the same table and its current state; the same
         key with different parameters is a conflict. The team's first table may wait while its
@@ -39,7 +44,9 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/TableCreate' }
       responses:
-        '200': { description: The table, possibly still creating, content: { application/json: { schema: { $ref: '#/components/schemas/Table' } } } }
+        '200': { description: Replay of completed creation with the current table, content: { application/json: { schema: { $ref: '#/components/schemas/TableCreation' } } } }
+        '201': { description: Created and verified, content: { application/json: { schema: { $ref: '#/components/schemas/TableCreation' } } } }
+        '202': { description: Same durable creation intent is pending, content: { application/json: { schema: { $ref: '#/components/schemas/TableCreation' } } } }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Invalid' }
 
@@ -53,18 +60,18 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
     patch:
       operationId: updateTable
-      summary: Rename a table or change its column metadata
+      summary: Edit presentation metadata without changing the physical schema
+      description: >-
+        Only labels and display names change. Stable column IDs and SQL names stay fixed.
+        Check current authorization; replay the recorded mutation before checking the revision
+        for a new mutation. Block edits during schema maintenance. Semantic changes affecting
+        execution require compatibility validation through schema maintenance.
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                name: { $ref: '#/components/schemas/TableName' }
-                columns: { type: array, items: { $ref: '#/components/schemas/ColumnMetadata' } }
-                metadata_revision: { type: integer, minimum: 1 }
-              required: [metadata_revision]
+            schema: { $ref: '#/components/schemas/TableUpdate' }
       responses:
         '200': { description: The table, content: { application/json: { schema: { $ref: '#/components/schemas/Table' } } } }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -80,10 +87,13 @@ paths:
     parameters: [{ $ref: '#/components/parameters/TableId' }]
     get:
       operationId: listRows
-      summary: A page of rows
+      summary: A bounded keyset page of rows
+      description: >-
+        Cursors bind the team, table, query, schema version and database generation. Changed or
+        expired cursors fail explicitly; never silently restart. This is not a database snapshot.
       parameters:
-        - { name: cursor, in: query, schema: { type: string } }
-        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 500, default: 100 } }
+        - $ref: '#/components/parameters/Cursor'
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 200 } }
       responses:
         '200':
           description: Rows in table order with their bounded metadata
@@ -91,25 +101,88 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [rows]
+                required: [table_id, database_generation, schema_version, rows, next_cursor, has_more]
                 properties:
+                  table_id: { type: string }
+                  database_generation: { type: integer, minimum: 1 }
+                  schema_version: { type: integer, minimum: 1 }
+                  has_more: { type: boolean }
                   rows: { type: array, items: { $ref: '#/components/schemas/Row' } }
                   next_cursor: { type: [string, 'null'] }
     post:
       operationId: writeRows
-      summary: Upsert rows by key, or add only the new ones
+      summary: Insert, conditionally patch or upsert, or insert only net-new rows
       description: >-
-        Only the fields a row names are written; `null` clears a cell. A row deleted during a run is
-        not recreated. New fields do not add columns here; that is `updateTable`.
+        One bounded atomic batch. Omitted fields stay unchanged; null clears a cell. Unknown
+        columns and duplicate targets fail. Patch never recreates a missing row. Upsert requires
+        an explicit conflict policy and a matching revision for an existing target.
+        Check authorization, maintenance and generation before receipts. Under the same Turso
+        transaction, serialize the key, recheck its fixed deadline, then replay a matching receipt
+        BEFORE new-operation schema and row revision checks. Values, revisions and the receipt
+        commit together. Changed payloads return idempotency_conflict. An uncertain commit is
+        write_outcome_unknown, not rollback; retry the frozen payload and key. An expired key
+        returns operation_expired even after receipt cleanup; never replace its identity to retry.
+      parameters: [{ $ref: '#/components/parameters/DataWriteKey' }]
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/RowsWrite' }
       responses:
-        '200': { description: Counts, content: { application/json: { schema: { $ref: '#/components/schemas/WriteResult' } } } }
+        '200': { description: Original committed receipt, content: { application/json: { schema: { $ref: '#/components/schemas/WriteResult' } } } }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Invalid' }
+
+  /tables/{tableId}/rows/delete:
+    parameters: [{ $ref: '#/components/parameters/TableId' }]
+    post:
+      operationId: deleteRows
+      summary: Delete rows with the same atomic receipt protocol as writeRows
+      description: Existing rows require matching revisions. Absent rows report unchanged. Never partially commit a conflicting batch.
+      parameters: [{ $ref: '#/components/parameters/DataWriteKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RowsDelete' } } }
+      responses:
+        '200': { description: Original committed receipt, content: { application/json: { schema: { $ref: '#/components/schemas/WriteResult' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Invalid' }
+
+  /tables/{tableId}/schema-changes:
+    parameters: [{ $ref: '#/components/parameters/TableId' }]
+    post:
+      operationId: createSchemaChange
+      summary: Validate or submit a fixed physical schema change
+      description: >-
+        A preflight creates no operation and reserves no version. Formal admission repeats checks
+        atomically, refuses incompatible bindings or unfinished Runs, enters maintenance and drains
+        admitted requests. DDL uncertainty requires reconciliation of the same intent. Never reopen
+        on lease expiry or replay old-generation DDL against a restored database.
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SchemaChangeRequest' } } }
+      responses:
+        '200':
+          description: Preflight or recorded completed operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SchemaPreflight'
+                  - $ref: '#/components/schemas/TableOperation'
+        '202': { description: Accepted maintenance operation, content: { application/json: { schema: { $ref: '#/components/schemas/TableOperation' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Invalid' }
+
+  /table-operations/{operationId}:
+    parameters: [{ name: operationId, in: path, required: true, schema: { type: string } }]
+    get:
+      operationId: getTableOperation
+      summary: Inspect creation or schema maintenance; this is not a business Run
+      responses:
+        '200': { description: Current operation and outcome, content: { application/json: { schema: { $ref: '#/components/schemas/TableOperation' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /tables/{tableId}/export:
     parameters: [{ $ref: '#/components/parameters/TableId' }]
@@ -132,7 +205,10 @@ paths:
     post:
       operationId: query
       summary: Read-only SQL over the team's tables
-      description: One statement, a row cap and a time limit. Writes go through `writeRows` and runs.
+      description: >-
+        One authorized read-only statement with bound parameters, a row cap, byte cap and deadline.
+        Internal receipt/control tables are inaccessible. Dependent Script queries must carry the
+        captured generation and are restricted to authorized bindings. Writes use writeRows.
       requestBody:
         required: true
         content:
@@ -141,6 +217,8 @@ paths:
               type: object
               required: [sql]
               properties:
+                database_generation: { type: integer, minimum: 1 }
+                params: { type: object, additionalProperties: { type: [string, number, boolean, 'null'] } }
                 sql: { type: string, maxLength: 20000 }
                 limit: { type: integer, minimum: 1, maximum: 1000, default: 1000 }
       responses:
@@ -326,6 +404,17 @@ paths:
 
 components:
   parameters:
+    Cursor: { name: cursor, in: query, schema: { type: string }, description: Opaque continuation bound to the team and unchanged query }
+    Limit: { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+    DataWriteKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 128 }
+      description: >-
+        Immutable versioned timestamp-and-random identity with a fixed acceptance deadline.
+        Exact encoding, recovery window and clock skew remain to be agreed before SDK writes ship.
+        Preserve it across retries; expired identities never become fresh writes after receipt cleanup.
     TableId: { name: tableId, in: path, required: true, schema: { type: string } }
     RunId: { name: runId, in: path, required: true, schema: { type: string } }
     InstallName: { name: installName, in: path, required: true, schema: { $ref: '#/components/schemas/InstallName' } }
@@ -355,6 +444,18 @@ components:
             - not_found
             - idempotency_conflict
             - revision_stale
+            - metadata_revision_conflict
+            - schema_version_conflict
+            - database_generation_conflict
+            - row_revision_conflict
+            - row_missing
+            - schema_dependency_conflict
+            - table_in_use
+            - table_maintenance
+            - invalid_cursor
+            - cursor_expired
+            - operation_expired
+            - write_outcome_unknown
             - table_bound
             - table_creating
             - database_provisioning
@@ -367,6 +468,17 @@ components:
             - unattended_cap_reached
             - binding_invalid
             - secret_input_unschedulable
+        committed: { type: boolean, description: False only when non-commit is confirmed; omitted for unknown outcomes }
+        conflicts:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [row_id, expected_revision, current_revision]
+            properties:
+              row_id: { type: string }
+              expected_revision: { type: integer, minimum: 1 }
+              current_revision: { type: [integer, 'null'], minimum: 1 }
         hint: { type: string, description: The next useful action, for a person or an agent }
         installs: { type: array, items: { type: string }, description: With `table_bound`, the installs that bind the table }
 
@@ -375,11 +487,29 @@ components:
     TableName: { type: string, pattern: '^[a-z0-9][a-z0-9_-]{0,79}$' }
     InstallName: { type: string, pattern: '^[a-z0-9][a-z0-9._-]{0,79}$' }
 
+    SqlName:
+      type: string
+      pattern: '^(?!sqlite_)(?!_treg_)[a-z_][a-z0-9_]*$'
+      description: Server-validated SQL identifier; reserved internal names are unavailable
+
+    ColumnCreate:
+      type: object
+      additionalProperties: false
+      required: [sql_name, storage_type, nullable]
+      properties:
+        sql_name: { $ref: '#/components/schemas/SqlName' }
+        label: { type: string, minLength: 1 }
+        storage_type: { type: string, enum: [TEXT, INTEGER, REAL, BLOB] }
+        nullable: { type: boolean }
+
     ColumnMetadata:
       type: object
-      required: [id, name]
+      required: [id, sql_name, name, storage_type, nullable]
       properties:
-        id: { type: string, description: The SQL column }
+        id: { type: string, description: Stable column identity; unchanged by SQL renames }
+        sql_name: { $ref: '#/components/schemas/SqlName' }
+        storage_type: { type: string, enum: [TEXT, INTEGER, REAL, BLOB] }
+        nullable: { type: boolean }
         name: { type: string, description: What the header shows }
         type:
           type: string
@@ -389,10 +519,20 @@ components:
 
     TableSummary:
       type: object
-      required: [id, name, kind, status, row_count, column_count, updated_at]
+      required: [id, name, sql_name, database_generation, schema_version, metadata_revision, kind, status, row_count, column_count, updated_at]
+      allOf:
+        - if: { properties: { status: { const: ready } } }
+          then:
+            properties:
+              database_generation: { type: integer, minimum: 1 }
+              schema_version: { type: integer, minimum: 1 }
       properties:
         id: { type: string }
         name: { $ref: '#/components/schemas/TableName' }
+        sql_name: { $ref: '#/components/schemas/SqlName' }
+        database_generation: { type: [integer, 'null'], minimum: 1, description: Last verified database incarnation; null until verified }
+        schema_version: { type: [integer, 'null'], minimum: 1, description: Last verified physical schema; null until verified }
+        metadata_revision: { type: integer, minimum: 1 }
         kind: { type: string, enum: [people, companies, memory, automatic, other] }
         status: { type: string, enum: [creating, ready, updating, failed, deleting] }
         row_count: { type: integer, minimum: 0 }
@@ -405,21 +545,111 @@ components:
       allOf:
         - $ref: '#/components/schemas/TableSummary'
         - type: object
-          required: [columns, metadata_revision]
+          required: [columns]
           properties:
             columns: { type: array, items: { $ref: '#/components/schemas/ColumnMetadata' } }
-            metadata_revision: { type: integer, minimum: 1 }
             source: { type: [object, 'null'], additionalProperties: true, description: The search or file it started from }
 
     TableCreate:
       type: object
       required: [name, columns]
+      additionalProperties: false
       properties:
         name: { $ref: '#/components/schemas/TableName' }
         kind: { type: string, enum: [people, companies, other], default: other }
-        columns: { type: array, minItems: 1, items: { $ref: '#/components/schemas/ColumnMetadata' } }
-        rows: { type: array, items: { type: object, additionalProperties: true }, description: Initial rows, for an import }
+        columns: { type: array, minItems: 1, items: { $ref: '#/components/schemas/ColumnCreate' } }
         source: { type: object, additionalProperties: true }
+
+    TableUpdate:
+      type: object
+      additionalProperties: false
+      required: [expected_metadata_revision]
+      properties:
+        expected_metadata_revision: { type: integer, minimum: 1 }
+        name: { $ref: '#/components/schemas/TableName' }
+        column_updates:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [column_id, label]
+            properties:
+              column_id: { type: string }
+              label: { type: string, minLength: 1 }
+
+    SchemaChange:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [op, column]
+          properties:
+            op: { const: add_column }
+            column: { $ref: '#/components/schemas/ColumnCreate' }
+        - type: object
+          additionalProperties: false
+          required: [op, column_id]
+          properties:
+            op: { const: drop_column }
+            column_id: { type: string }
+        - type: object
+          additionalProperties: false
+          required: [op, column_id, sql_name]
+          properties:
+            op: { const: rename_column }
+            column_id: { type: string }
+            sql_name: { $ref: '#/components/schemas/SqlName' }
+        - type: object
+          additionalProperties: false
+          required: [op, column_id, storage_type]
+          properties:
+            op: { const: change_type }
+            column_id: { type: string }
+            storage_type: { type: string, enum: [TEXT, INTEGER, REAL, BLOB] }
+
+    SchemaChangeRequest:
+      type: object
+      additionalProperties: false
+      required: [database_generation, expected_schema_version, expected_metadata_revision, changes]
+      properties:
+        database_generation: { type: integer, minimum: 1 }
+        expected_schema_version: { type: integer, minimum: 1 }
+        expected_metadata_revision: { type: integer, minimum: 1 }
+        dry_run: { type: boolean, default: false }
+        changes: { type: array, minItems: 1, items: { $ref: '#/components/schemas/SchemaChange' } }
+
+    SchemaPreflight:
+      type: object
+      required: [dry_run, changes, conflicts]
+      properties:
+        dry_run: { const: true }
+        changes: { type: array, items: { $ref: '#/components/schemas/SchemaChange' } }
+        conflicts: { type: array, items: { $ref: '#/components/schemas/Error' } }
+
+    TableCreation:
+      type: object
+      required: [table, operation]
+      properties:
+        table: { $ref: '#/components/schemas/Table' }
+        operation: { $ref: '#/components/schemas/TableOperation' }
+
+    TableOperation:
+      type: object
+      required: [kind, operation_id, table_id, type, status, phase, links]
+      properties:
+        kind: { const: table_operation }
+        operation_id: { type: string }
+        table_id: { type: string }
+        type: { type: string, enum: [create_table, alter_table] }
+        status: { type: string, enum: [pending, running, succeeded, failed] }
+        phase: { type: string, description: Includes provisioning, creating_table, draining, applying, reconciling and completed }
+        base_schema_version: { type: [integer, 'null'], minimum: 1 }
+        target_schema_version: { type: integer, minimum: 1 }
+        applied_schema_version: { type: [integer, 'null'], minimum: 1 }
+        error: { $ref: '#/components/schemas/Error' }
+        links:
+          type: object
+          required: [self]
+          properties: { self: { type: string } }
 
     RowMeta:
       type: object
@@ -449,34 +679,93 @@ components:
 
     Row:
       type: object
-      required: [id, cells]
+      required: [id, revision, cells]
       properties:
         id: { type: string, description: Stable row id (`_treg_row_id`) }
-        cells: { type: object, additionalProperties: true }
+        revision: { type: integer, minimum: 1, description: Platform-managed row revision for compare-and-set writes }
+        cells: { type: object, additionalProperties: true, description: Business values; internal _treg_ fields are not writable }
         meta: { $ref: '#/components/schemas/RowMeta' }
         created_at: { $ref: '#/components/schemas/Timestamp' }
         updated_at: { $ref: '#/components/schemas/Timestamp' }
 
+    RowWrite:
+      type: object
+      additionalProperties: false
+      required: [values]
+      properties:
+        id: { type: string, minLength: 1 }
+        expected_revision: { type: integer, minimum: 1 }
+        values: { type: object, additionalProperties: true }
+
     RowsWrite:
       type: object
-      required: [mode, rows]
+      additionalProperties: false
+      required: [database_generation, expected_schema_version, mode, rows]
       properties:
-        mode: { type: string, enum: [upsert, net_new] }
-        key: { type: string, description: The column that identifies a row; `id` when omitted }
-        rows: { type: array, minItems: 1, maxItems: 1000, items: { type: object, additionalProperties: true } }
+        database_generation: { type: integer, minimum: 1 }
+        expected_schema_version: { type: integer, minimum: 1 }
+        mode: { type: string, enum: [insert, patch, upsert, net_new] }
+        key: { type: string, description: Declared unique business key; otherwise match stable row id }
+        on_conflict: { type: string, enum: [error, update_if_revision_matches], description: Required for upsert; never bypasses revision checks }
+        rows: { type: array, minItems: 1, maxItems: 1000, items: { $ref: '#/components/schemas/RowWrite' } }
+      allOf:
+        - if: { properties: { mode: { const: patch } } }
+          then: { properties: { rows: { items: { required: [id, expected_revision] } } } }
+        - if: { properties: { mode: { const: upsert } } }
+          then: { required: [on_conflict] }
+
+    RowsDelete:
+      type: object
+      additionalProperties: false
+      required: [database_generation, expected_schema_version, rows]
+      properties:
+        database_generation: { type: integer, minimum: 1 }
+        expected_schema_version: { type: integer, minimum: 1 }
+        rows:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, expected_revision]
+            properties:
+              id: { type: string }
+              expected_revision: { type: integer, minimum: 1 }
 
     WriteResult:
       type: object
-      required: [written, created, skipped]
+      required: [operation_id, table_id, database_generation, schema_version, committed, counts, rows]
       properties:
-        written: { type: integer, minimum: 0 }
-        created: { type: integer, minimum: 0 }
-        skipped: { type: integer, minimum: 0, description: Rows `net_new` left alone }
+        operation_id: { type: string }
+        table_id: { type: string }
+        database_generation: { type: integer, minimum: 1 }
+        schema_version: { type: integer, minimum: 1 }
+        committed: { type: boolean, const: true }
+        counts:
+          type: object
+          required: [inserted, updated, skipped, deleted]
+          properties:
+            inserted: { type: integer, minimum: 0 }
+            updated: { type: integer, minimum: 0 }
+            skipped: { type: integer, minimum: 0 }
+            deleted: { type: integer, minimum: 0 }
+        rows:
+          type: array
+          maxItems: 1000
+          items:
+            type: object
+            required: [id, status, revision]
+            properties:
+              id: { type: string }
+              status: { type: string, enum: [inserted, updated, skipped, deleted, unchanged] }
+              revision: { type: [integer, 'null'], minimum: 1, description: Null when the row is absent after deletion }
 
     QueryResult:
       type: object
-      required: [columns, rows, truncated]
+      required: [database_generation, columns, rows, truncated]
       properties:
+        database_generation: { type: integer, minimum: 1 }
         columns: { type: array, items: { type: string } }
         rows: { type: array, items: { type: array, items: {} } }
         truncated: { type: boolean }

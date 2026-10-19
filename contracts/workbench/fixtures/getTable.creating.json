@@ -9,23 +9,35 @@
   "bound_by": [],
   "columns": [
     {
-      "id": "full_name",
+      "id": "col_full_name",
       "name": "Full name",
-      "type": "person_name"
+      "type": "person_name",
+      "sql_name": "full_name",
+      "storage_type": "TEXT",
+      "nullable": true
     },
     {
-      "id": "company_domain",
+      "id": "col_company_domain",
       "name": "Company domain",
-      "type": "domain"
+      "type": "domain",
+      "sql_name": "company_domain",
+      "storage_type": "TEXT",
+      "nullable": true
     },
     {
-      "id": "title",
+      "id": "col_title",
       "name": "Title",
-      "type": "job_title"
+      "type": "job_title",
+      "sql_name": "title",
+      "storage_type": "TEXT",
+      "nullable": true
     }
   ],
   "metadata_revision": 1,
   "source": {
     "file": "imported-list.csv"
-  }
+  },
+  "sql_name": "imported_list",
+  "database_generation": null,
+  "schema_version": null
 }

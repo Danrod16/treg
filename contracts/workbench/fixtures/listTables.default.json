@@ -11,7 +11,11 @@
       "bound_by": [
         "lead-emails",
         "leads.email"
-      ]
+      ],
+      "sql_name": "leads",
+      "database_generation": 1,
+      "schema_version": 1,
+      "metadata_revision": 1
     },
     {
       "id": "tbl_01HZX1COMP",
@@ -23,7 +27,11 @@
       "updated_at": "2026-10-18T09:02:40Z",
       "bound_by": [
         "competitor-watch"
-      ]
+      ],
+      "sql_name": "competitors",
+      "database_generation": 1,
+      "schema_version": 1,
+      "metadata_revision": 1
     },
     {
       "id": "tbl_01HZX1Q4",
@@ -36,7 +44,11 @@
       "bound_by": [
         "partner-emails",
         "q4-accounts.people"
-      ]
+      ],
+      "sql_name": "q4_accounts",
+      "database_generation": 1,
+      "schema_version": 1,
+      "metadata_revision": 1
     },
     {
       "id": "tbl_01HZX1SEEN",
@@ -48,7 +60,11 @@
       "updated_at": "2026-10-19T09:02:00Z",
       "bound_by": [
         "competitor-watch"
-      ]
+      ],
+      "sql_name": "competitor_watch_seen",
+      "database_generation": 1,
+      "schema_version": 1,
+      "metadata_revision": 1
     },
     {
       "id": "tbl_auto_calls",
@@ -59,7 +75,11 @@
       "column_count": 9,
       "updated_at": "2026-10-19T09:20:00Z",
       "bound_by": [],
-      "retention_days": 90
+      "retention_days": 90,
+      "sql_name": "calls",
+      "database_generation": 1,
+      "schema_version": 1,
+      "metadata_revision": 1
     },
     {
       "id": "tbl_auto_people",
@@ -70,7 +90,11 @@
       "column_count": 12,
       "updated_at": "2026-10-19T09:20:00Z",
       "bound_by": [],
-      "retention_days": 90
+      "retention_days": 90,
+      "sql_name": "people",
+      "database_generation": 1,
+      "schema_version": 1,
+      "metadata_revision": 1
     },
     {
       "id": "tbl_auto_companies",
@@ -81,7 +105,13 @@
       "column_count": 14,
       "updated_at": "2026-10-19T09:20:00Z",
       "bound_by": [],
-      "retention_days": 90
+      "retention_days": 90,
+      "sql_name": "companies",
+      "database_generation": 1,
+      "schema_version": 1,
+      "metadata_revision": 1
     }
-  ]
+  ],
+  "next_cursor": null,
+  "has_more": false
 }
