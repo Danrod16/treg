@@ -5485,6 +5485,7 @@ def _catalog_search(query: str, args, cfg) -> None:
     # under it. Draw that as a hierarchy — "let treg choose" leads, the specific providers indent.
     routed_caps = {e["capability"] for e in rows if e.get("kind") == "routed"}
     open_group: dict | None = None  # the routed parent whose children are printing
+    own_key_only = False
 
     def _close_group() -> None:
         # the server shows the best few children; the rest are one `catalog get` away
@@ -5508,7 +5509,11 @@ def _catalog_search(query: str, args, cfg) -> None:
             _close_group()
             open_group = None
         indent = "    " if e.get("capability") in routed_caps else "  "
-        print(f"{indent}{_clip(e['id'], idw):<{idw}} {_clip(_cost_usd(e.get('cost')), 16):<16} "
+        # A row treg's key cannot serve (`platform_blocked`, unpriced) has no price for this caller:
+        # showing it would sell a call that is refused before it reaches the provider.
+        cost = "own key only" if e.get("platform_eligible") is False else _cost_usd(e.get("cost"))
+        own_key_only = own_key_only or e.get("platform_eligible") is False
+        print(f"{indent}{_clip(e['id'], idw):<{idw}} {_clip(cost, 16):<16} "
               f"{e.get('added') or '-':<10} "
               f"{'●' if e['provider'] in connected else ' '}  {_clip(e.get('summary', ''), 78)}")
     _close_group()
@@ -5521,6 +5526,9 @@ def _catalog_search(query: str, args, cfg) -> None:
         # Once, below the table: inside it, an indented sentence reads like one more row.
         _dim("hint: a ▸ ROUTED row lets treg pick among its providers (own keys first, then cheapest per "
              "hit) and names the one that served; call an indented id to choose the provider yourself")
+    if own_key_only:
+        _dim("hint: \"own key only\" means treg's key cannot serve that tool; it works once your team "
+             "connects its own key for the provider (treg catalog get <id> says how)")
     _dim(f"next: treg catalog get <id> (e.g. {rows[0]['id']}) for its params, price and a ready `treg call` line")
 
 
