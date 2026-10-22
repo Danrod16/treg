@@ -202,8 +202,11 @@ def test_the_marketplace_resolves_to_a_real_plugin():
     root = (CLAUDE_PLUGIN.parent / entry["source"]).resolve()
     assert (root / "skills" / "treg" / "SKILL.md").exists(), (
         f"marketplace source {entry['source']!r} resolves to {root}, which ships no treg skill")
+    # For an entry whose source is the marketplace root, Claude Code loads only the listed skills
+    # instead of scanning `skills/`, which also holds the optional workflow skills.
+    assert entry["skills"] == ["./skills/treg"]
     # `source: "./"` makes the plugin root the REPO root, so anything Claude Code auto-discovers
-    # there ships to users. Only `skills/` is intended.
+    # there ships to users.
     for stray in ("commands", "agents", "hooks"):
         assert not (root / stray).is_dir(), (
             f"a root `{stray}/` directory would be published as part of the plugin")

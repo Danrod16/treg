@@ -71,8 +71,12 @@ skills.sh.json                    category grouping for skills.sh / Hermes' Skil
 `npx skills add` resolves and what `clawhub skill publish` takes — one generated tree, four channels.
 
 A consequence worth remembering: anything Claude Code auto-discovers at the repo root ships to users.
-Only `skills/` is intended; a root-level `commands/`, `agents/`, or `hooks/` directory would be
-published too. `tests/test_plugin.py` asserts none appears.
+Only the treg skill is intended. The marketplace entry lists `"skills": ["./skills/treg"]`, and for an
+entry whose `source` is the marketplace root that list replaces the default `skills/` scan, so the
+workflow skills next to it (which `npx skills add` and the installer offer separately) stay out of
+the plugin. The same key in `plugin.json` would only add to the scan. A root-level `commands/`,
+`agents/`, or `hooks/` directory would still be published; `tests/test_plugin.py` asserts none
+appears.
 
 **Never edit `skills/treg/SKILL.md`.** Change `src/treg/web/skill.md` and regenerate:
 
