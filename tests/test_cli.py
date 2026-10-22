@@ -1076,6 +1076,24 @@ def test_catalog_search_explains_routing_once(monkeypatch, capsys):
     assert "serpstat.web.anchors.list" in out
 
 
+def test_catalog_search_indented_rows_keep_columns_aligned(monkeypatch, capsys):
+    """A routed group's children indent 2 more than the header: their COST must still start under COST."""
+    rows = [{"id": "treg.people.email.verify", "kind": "routed", "provider": "treg", "capability": "people.email.verify",
+             "summary": "pick one", "routed_children": ["contactout.people.email.verify"], "cost": {"type": "free", "usd": 0}},
+            {"id": "contactout.people.email.verify", "provider": "contactout", "capability": "people.email.verify",
+             "summary": "verify", "cost": {"type": "per_call", "usd": 0.002}, "added": "2026-09-08"},
+            {"id": "hunter.people.email.find", "provider": "hunter", "capability": "people.email.find",
+             "summary": "find", "cost": {"type": "per_call", "usd": 0.01}, "added": "2026-07-28"}]
+    _stub_catalog_client(monkeypatch, {"/catalog/search": _CatalogResp(
+        {"query": "email", "total": len(rows), "verdict": "strong", "results": rows})})
+    monkeypatch.setattr(cli, "_connected_providers", lambda cfg: set())
+    cli.cmd_catalog(cli.build_parser().parse_args(["catalog", "search", "email"]), {"base_url": "http://x"})
+    lines = capsys.readouterr().out.splitlines()
+    header = next(line for line in lines if "ENDPOINT" in line)
+    cols = {line.index("$") for line in lines if "$0.0" in line}
+    assert cols == {header.index("COST")}, "child, plain and header rows share the COST column"
+
+
 def test_catalog_search_marks_rows_treg_key_cannot_serve(monkeypatch, capsys):
     """A platform_blocked row stays discoverable, but its free price must not read as a call treg's
     key will make: the cell says it needs the team's own key, and one hint below the table says why."""
