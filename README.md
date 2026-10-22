@@ -95,9 +95,8 @@ Discover what your team has shared: `treg tool ls` · check credential health: `
 /plugin install treg@treg
 ```
 
-The plugin brings the treg skill and treg's tools. To sign in, type `/mcp`, select
-`plugin:treg:treg` and choose **Authenticate**: treg's sign-in page opens in your browser, and its
-consent screen is where you choose which team pays. Other agents: `npx skills add superdesigndev/treg -s treg`
+It brings the treg skill and treg's tools; sign in with `/mcp` → `plugin:treg:treg` →
+**Authenticate**. Other agents: `npx skills add superdesigndev/treg -s treg`
 (or see [Workflow skills](#workflow-skills) for the rest).
 See [docs/CLAUDE-PLUGIN.md](docs/CLAUDE-PLUGIN.md). MiniMax Code / MiniMax Agent users: the same
 skill ships via the MiniMax Plugin Marketplace ([docs/MINIMAX-PLUGIN.md](docs/MINIMAX-PLUGIN.md)).

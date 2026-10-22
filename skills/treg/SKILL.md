@@ -6,33 +6,19 @@ version: 0.27.0
 
 ## First, check which treg you have
 
-**If you can see treg's tools** (`catalog_search`, `catalog_get`, `call`, `balance`, `my_tools`; in
-Claude Code they are named `mcp__plugin_treg_treg__catalog_search` and so on), treg is connected.
-Use them; there is nothing to install. The rest of this page is written around the `treg` command
-line, so read `treg catalog search` as `catalog_search`, `treg call` as `call`, and so on.
-
-**If this came with the treg Claude Code plugin but the tools are missing**, its connector is not
-signed in yet, and you cannot sign it in from your shell (`claude mcp login` needs a terminal). Ask
-the human to type `/mcp` in Claude Code, select `plugin:treg:treg` and choose **Authenticate**, or to
-run `claude mcp login plugin:treg:treg` in their own terminal. treg's sign-in page opens in the
-browser (GitHub, Google or an emailed code), and its consent screen is where they choose which team
-pays. The tools appear once it finishes; if they do not, start a new session.
-
-**If you have this page without the plugin** (installed as a skill on its own), set up the CLI and
-the tools once, in this order:
+- **treg's tools are there** (`catalog_search`, `call`, `balance`, ...; in Claude Code
+  `mcp__plugin_treg_treg__*`): use them, nothing to install. Read `treg catalog search` below as
+  `catalog_search`, `treg call` as `call`, and so on.
+- **The treg plugin is installed but its tools are missing**: it is not signed in, and you cannot do
+  that from your shell. Ask the human to type `/mcp`, select `plugin:treg:treg` and choose
+  **Authenticate**. If the tools do not appear after that, start a new session.
+- **No plugin**: set up the CLI once, in this order (step 3 does nothing before step 2):
 
 ```bash
-curl -fsSL https://treg.to/install.sh | sh   # 1. the CLI (skip if `treg --version` already works)
-treg login                                   # 2. sign in, opens a browser
-treg mcp install                             # 3. register treg's tools into this agent
+curl -fsSL https://treg.to/install.sh | sh
+treg login
+treg mcp install
 ```
-
-Step 3 writes the token from step 2, so the order matters: run out of order it exits without writing
-anything. The tools appear after the agent restarts; until then everything on this page works
-through the CLI.
-
-A new team starts with **$1.00 of free balance**, so there is nothing to pay before the first call.
-Never ask the human for a provider's API key, which is the thing treg exists to avoid.
 
 ---
 

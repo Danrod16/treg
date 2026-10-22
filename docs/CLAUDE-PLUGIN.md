@@ -1,61 +1,26 @@
 # The Claude Code plugin, and where it gets listed
 
-treg ships as a Claude Code plugin served from this repo as its own marketplace: live the moment it
-merges, with no reviewer in the loop. It carries the treg skill and declares treg's MCP server.
-
-## Install
+treg ships as a Claude Code plugin from this repo, which is its own marketplace: live on merge, no
+review. It carries the treg skill and treg's MCP server.
 
 ```
 /plugin marketplace add superdesigndev/treg
 /plugin install treg@treg
 ```
 
-From a shell, `claude plugin install treg --marketplace superdesigndev/treg` does both. The skill
-loads as `treg:treg`; the tools as `mcp__plugin_treg_treg__*`.
+## Design
 
-### The manifest declares the server, URL only
-
-`.claude-plugin/plugin.json` declares `treg` inline as `{"type": "http", "url": "https://treg.to/mcp/"}`
-and nothing else. Claude Code registers it at install time as `plugin:treg:treg`; `/mcp/` answers an
-unsigned request with a `401` and a `WWW-Authenticate` pointing at its protected-resource metadata,
-so Claude Code shows "Needs authentication" and exposes no tools until the human signs in. A token
-header would instead mean five always-on tools that 401 on every call, which is why the plugin was
-skills-only before `/mcp/` took OAuth.
-
-It is inline rather than a root `.mcp.json` because the plugin root is the repo root: a root
-`.mcp.json` would also become a project MCP server for everyone who opens this repo in Claude Code.
-
-When the user already has a `treg` server with the same URL (from `treg mcp install`), Claude Code
-keeps theirs and suppresses the plugin's, so nobody sees two sets of tools.
-
-### Sign-in is the human's step
-
-`claude mcp login plugin:treg:treg` refuses to run without a terminal ("stdin isn't a terminal"),
-with or without `--no-browser`, so an agent cannot finish the OAuth flow from its shell. The skill
-therefore asks the human to type `/mcp`, select `plugin:treg:treg` and choose **Authenticate** (or
-run `claude mcp login plugin:treg:treg` in their own terminal). treg's consent screen is where they
-choose which team pays.
-
-### One SKILL.md, three states
-
-`skills/treg/SKILL.md` also ships on its own through `npx skills add` and ClawHub, where there is no
-connector. So its bootstrap covers: the tools are there; the plugin is installed but not signed in;
-no plugin at all. The last walks the CLI setup in a fixed order:
-
-```bash
-curl -fsSL https://treg.to/install.sh | sh   # 1. the CLI (skipped if treg --version works)
-treg login                                   # 2. sign in, the token
-treg mcp install                             # 3. the tools, header-authed with that token
-```
-
-**The order is load-bearing.** `cmd_mcp_install` (`src/treg/cli.py`) reads the token from config and
-`sys.exit`s *before writing anything* when there is none, and again on a 401. Run step 3 before
-step 2 and it is a no-op, quiet enough that an agent moves on believing the tools exist.
-`claude mcp add` does not take effect until the agent restarts.
-
-**`install.sh` always runs `treg skill bootstrap`**, so the CLI path also drops a copy of this skill
-into `~/.claude/skills/treg/`. The token branch of `install.sh` (`… | sh -s -- --token <key>`) does
-all three steps at once, the right path for CI or a machine handed a team token.
+- **The manifest declares the server inline, URL only** (`https://treg.to/mcp/`). Unsigned, `/mcp/`
+  answers `401` with `WWW-Authenticate`, so Claude Code shows "Needs authentication" and exposes no
+  tools until the human signs in. Not a root `.mcp.json`: the plugin root is the repo root, where
+  that file would also configure everyone working in this repo.
+- **The human signs in through `/mcp`.** `claude mcp login` refuses to run without a terminal, so
+  the agent cannot do it from its shell.
+- **A user-scope `treg` server with the same URL** (from `treg mcp install`) wins, and Claude Code
+  suppresses the plugin's: no duplicate tools.
+- **One SKILL.md, three states.** It also ships alone through `npx skills add` and ClawHub, so its
+  bootstrap falls back to `install.sh` -> `treg login` -> `treg mcp install`. The order is
+  load-bearing: `cmd_mcp_install` exits without writing anything when there is no token yet.
 
 ## What is where
 
@@ -70,13 +35,10 @@ skills.sh.json                    category grouping for skills.sh / Hermes' Skil
 `skills/treg/` is at the top level rather than under `plugin/`. That one path is also what
 `npx skills add` resolves and what `clawhub skill publish` takes — one generated tree, four channels.
 
-A consequence worth remembering: anything Claude Code auto-discovers at the repo root ships to users.
-Only the treg skill is intended. The marketplace entry lists `"skills": ["./skills/treg"]`, and for an
-entry whose `source` is the marketplace root that list replaces the default `skills/` scan, so the
-workflow skills next to it (which `npx skills add` and the installer offer separately) stay out of
-the plugin. The same key in `plugin.json` would only add to the scan. A root-level `commands/`,
-`agents/`, or `hooks/` directory would still be published; `tests/test_plugin.py` asserts none
-appears.
+Anything Claude Code auto-discovers at the repo root ships to users. The marketplace entry's
+`"skills": ["./skills/treg"]` keeps the workflow skills out (on an entry whose source is the
+marketplace root it replaces the `skills/` scan; in `plugin.json` it would only add to it). A root
+`commands/`, `agents/` or `hooks/` would still ship; `tests/test_plugin.py` asserts none exists.
 
 **Never edit `skills/treg/SKILL.md`.** Change `src/treg/web/skill.md` and regenerate:
 

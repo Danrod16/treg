@@ -182,9 +182,8 @@ def test_the_claude_skill_carries_the_version_clawhub_requires():
 
 
 def test_the_claude_plugin_declares_the_connector_inline():
-    """URL only, so Claude Code runs OAuth itself: an unsigned server reports "Needs authentication"
-    and exposes no tools. Inline rather than a root `.mcp.json`, because the plugin root is the repo
-    root, where that file would also become a project MCP server for everyone working in this repo."""
+    """URL only, so Claude Code runs OAuth and exposes no tools before sign-in. Inline, because a
+    root `.mcp.json` would also configure everyone working in this repo."""
     manifest = json.loads(CLAUDE_MANIFEST.read_text(encoding="utf-8"))
     assert manifest["mcpServers"] == {"treg": {"type": "http", "url": "https://treg.to/mcp/"}}
     assert not (ROOT / ".mcp.json").exists(), "a root .mcp.json would be picked up by the plugin"
@@ -202,8 +201,7 @@ def test_the_marketplace_resolves_to_a_real_plugin():
     root = (CLAUDE_PLUGIN.parent / entry["source"]).resolve()
     assert (root / "skills" / "treg" / "SKILL.md").exists(), (
         f"marketplace source {entry['source']!r} resolves to {root}, which ships no treg skill")
-    # For an entry whose source is the marketplace root, Claude Code loads only the listed skills
-    # instead of scanning `skills/`, which also holds the optional workflow skills.
+    # Replaces the `skills/` scan, which would also ship the optional workflow skills.
     assert entry["skills"] == ["./skills/treg"]
     # `source: "./"` makes the plugin root the REPO root, so anything Claude Code auto-discovers
     # there ships to users.
