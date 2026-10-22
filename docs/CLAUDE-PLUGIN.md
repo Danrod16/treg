@@ -1,9 +1,7 @@
 # The Claude Code plugin, and where it gets listed
 
-treg's Codex/ChatGPT plugin is built around the **MCP connector**, and that listing sits in a review
-queue. The skill does not need MCP: `src/treg/web/skill.md` already teaches an agent to install the
-CLI, sign in, and call the catalog. So it also ships as a **skills-only Claude Code plugin**, served
-from this repo as its own marketplace — live the moment it merges, with no reviewer in the loop.
+treg ships as a Claude Code plugin served from this repo as its own marketplace: live the moment it
+merges, with no reviewer in the loop. It carries the treg skill and declares treg's MCP server.
 
 ## Install
 
@@ -12,44 +10,52 @@ from this repo as its own marketplace — live the moment it merges, with no rev
 /plugin install treg@treg
 ```
 
-The skill loads as `treg:treg`, and the install itself needs **no token and no configuration** —
-that is the point of shipping a skills-only manifest.
+From a shell, `claude plugin install treg --marketplace superdesigndev/treg` does both. The skill
+loads as `treg:treg`; the tools as `mcp__plugin_treg_treg__*`.
 
-### Skills-only manifest, full setup at first run
+### The manifest declares the server, URL only
 
-These are two different questions, and conflating them is the easy mistake here.
+`.claude-plugin/plugin.json` declares `treg` inline as `{"type": "http", "url": "https://treg.to/mcp/"}`
+and nothing else. Claude Code registers it at install time as `plugin:treg:treg`; `/mcp/` answers an
+unsigned request with a `401` and a `WWW-Authenticate` pointing at its protected-resource metadata,
+so Claude Code shows "Needs authentication" and exposes no tools until the human signs in. A token
+header would instead mean five always-on tools that 401 on every call, which is why the plugin was
+skills-only before `/mcp/` took OAuth.
 
-The **manifest** declares no MCP server, because anything it declared would be registered at install
-time, before any human has signed in — five always-on tools that 401 on every call. Keeping it out is
-what makes `/plugin install` a zero-config action.
+It is inline rather than a root `.mcp.json` because the plugin root is the repo root: a root
+`.mcp.json` would also become a project MCP server for everyone who opens this repo in Claude Code.
 
-The **skill** then completes the setup on first use, when a human *is* present to sign in. Its
-bootstrap walks three steps in a fixed order:
+When the user already has a `treg` server with the same URL (from `treg mcp install`), Claude Code
+keeps theirs and suppresses the plugin's, so nobody sees two sets of tools.
+
+### Sign-in is the human's step
+
+`claude mcp login plugin:treg:treg` refuses to run without a terminal ("stdin isn't a terminal"),
+with or without `--no-browser`, so an agent cannot finish the OAuth flow from its shell. The skill
+therefore asks the human to type `/mcp`, select `plugin:treg:treg` and choose **Authenticate** (or
+run `claude mcp login plugin:treg:treg` in their own terminal). treg's consent screen is where they
+choose which team pays.
+
+### One SKILL.md, three states
+
+`skills/treg/SKILL.md` also ships on its own through `npx skills add` and ClawHub, where there is no
+connector. So its bootstrap covers: the tools are there; the plugin is installed but not signed in;
+no plugin at all. The last walks the CLI setup in a fixed order:
 
 ```bash
 curl -fsSL https://treg.to/install.sh | sh   # 1. the CLI (skipped if treg --version works)
-treg login                                   # 2. sign in — the token
+treg login                                   # 2. sign in, the token
 treg mcp install                             # 3. the tools, header-authed with that token
 ```
 
-So the intended end state is CLI **and** skill **and** MCP tools — reached by the skill, not by the
-manifest.
-
 **The order is load-bearing.** `cmd_mcp_install` (`src/treg/cli.py`) reads the token from config and
-`sys.exit`s *before writing anything* when there is none — and again on a 401, with "nothing was
-written". Run step 3 before step 2 and it is a no-op, quiet enough that an agent moves on believing
-the tools exist. `test_the_claude_bootstrap_sets_up_cli_login_and_mcp_in_order` pins the sequence,
-and pins the restart note too: `claude mcp add` does not take effect until the agent restarts.
+`sys.exit`s *before writing anything* when there is none, and again on a 401. Run step 3 before
+step 2 and it is a no-op, quiet enough that an agent moves on believing the tools exist.
+`claude mcp add` does not take effect until the agent restarts.
 
-Two consequences worth remembering:
-
-- **`install.sh` always runs `treg skill bootstrap`** — there is no flag to suppress it — so step 1
-  drops a *second* copy of this same skill into `~/.claude/skills/treg/`. Harmless, but redundant
-  with the plugin. The bootstrap tells the agent to mention it to the human rather than delete it
-  silently; deleting files under `$HOME` is not a skill's call to make.
-- **The token branch of `install.sh` does all three steps at once**
-  (`… | sh -s -- --token <key>`). That is the right path for CI or a machine handed a team token —
-  but not for a plugin user, who has no token until step 2.
+**`install.sh` always runs `treg skill bootstrap`**, so the CLI path also drops a copy of this skill
+into `~/.claude/skills/treg/`. The token branch of `install.sh` (`… | sh -s -- --token <key>`) does
+all three steps at once, the right path for CI or a machine handed a team token.
 
 ## What is where
 

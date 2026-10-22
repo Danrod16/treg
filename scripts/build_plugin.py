@@ -5,8 +5,9 @@ Five shop windows, four bootstraps, one source:
 
 - **codex**  -> `plugin/skills/treg/SKILL.md` — ships an MCP connector, so its bootstrap points at
   the MCP tools and tells the reader NOT to reach for a terminal.
-- **claude** -> `skills/treg/SKILL.md` — skills-only by design (nothing about it waits on a
-  directory review), so its bootstrap says the opposite: there are no tools, install the CLI. It
+- **claude** -> `skills/treg/SKILL.md` - the Claude Code plugin ships treg's MCP server (URL only,
+  OAuth), but the same file also ships alone through `npx skills add` and ClawHub, so its bootstrap
+  covers three states: tools present, plugin not yet signed in, and no plugin (install the CLI). It
   also gets a `version:` stamped into its frontmatter, which is what ClawHub requires and Claude
   Code ignores.
 - **cursor** -> `plugins/treg/skills/treg/SKILL.md` — same CLI bootstrap as claude; Cursor
@@ -34,12 +35,10 @@ Three transformations, each for a reason the served file does not have:
    substitutes it inside an installed plugin, so a raw copy would ship the literal string `{BASE}`
    and every URL in it would be broken. It is baked to the public deployment here.
 
-2. A short section is prepended, and it is the ONLY thing that differs between the two variants —
-   because they land in opposite worlds. Codex arrives with a connector, so its bootstrap maps the
-   page onto the MCP tools and tells the reader not to reach for a terminal. Claude Code arrives
-   with neither the CLI nor the tools, so its bootstrap walks the setup that produces both:
-   `install.sh` -> `treg login` -> `treg mcp install`, in that order (step 3 exits without writing
-   if it runs before there is a token). Without either, a first run is an agent dutifully invoking
+2. A short section is prepended, and it is the ONLY thing that differs between the variants -
+   because they land in different worlds: with the tools signed in, with a connector still waiting
+   for sign-in, or with neither (where the bootstrap walks `install.sh` -> `treg login` ->
+   `treg mcp install`, in that order). Without it, a first run is an agent dutifully invoking
    something that does not exist — the listing's whole conversion funnel spent on an error message.
 
 3. The Claude variant gets `version:` stamped into its frontmatter. ClawHub requires it and Claude
@@ -166,32 +165,42 @@ Either way, the rest of this page is the part that matters — **when** treg is 
 ---
 """
 
-# The Claude Code plugin's MANIFEST declares no connector — anything it declared would be registered
-# at install time, before a human has signed in, i.e. five always-on tools that 401 on every call.
-# Keeping it out is what makes `/plugin install` zero-config. The SKILL then finishes the job at
-# first run, when a human IS present to sign in, and the intended end state is CLI + skill + tools.
-#
-# Hence the ordered three-step block below. The order is load-bearing, not stylistic: `cmd_mcp_install`
-# reads the token from config and sys.exits before writing anything when there is none, so running it
-# ahead of `treg login` is a silent no-op an agent would move straight past.
-CLI_BOOTSTRAP = """
-## First run: finish the setup
+# Claude Code registers the manifest's server at install time; until the human signs in it reports
+# "Needs authentication" and exposes no tools. `claude mcp login` refuses to run without a terminal,
+# so the agent cannot finish the sign-in from its shell: the human does it through `/mcp`.
+# The same SKILL.md ships on its own through `npx skills add` and ClawHub, with no connector at all,
+# so the CLI path stays as the fallback, in its load-bearing order (`treg mcp install` exits without
+# writing anything before `treg login` has stored a token).
+CLAUDE_BOOTSTRAP = """
+## First, check which treg you have
 
-This plugin ships the skill, so you have this page — but not yet the `treg` command, and not yet its
-tools. Set both up **once**, in this order:
+**If you can see treg's tools** (`catalog_search`, `catalog_get`, `call`, `balance`, `my_tools`; in
+Claude Code they are named `mcp__plugin_treg_treg__catalog_search` and so on), treg is connected.
+Use them; there is nothing to install. The rest of this page is written around the `treg` command
+line, so read `treg catalog search` as `catalog_search`, `treg call` as `call`, and so on.
+
+**If this came with the treg Claude Code plugin but the tools are missing**, its connector is not
+signed in yet, and you cannot sign it in from your shell (`claude mcp login` needs a terminal). Ask
+the human to type `/mcp` in Claude Code, select `plugin:treg:treg` and choose **Authenticate**, or to
+run `claude mcp login plugin:treg:treg` in their own terminal. treg's sign-in page opens in the
+browser (GitHub, Google or an emailed code), and its consent screen is where they choose which team
+pays. The tools appear once it finishes; if they do not, start a new session.
+
+**If you have this page without the plugin** (installed as a skill on its own), set up the CLI and
+the tools once, in this order:
 
 ```bash
 curl -fsSL {BASE}/install.sh | sh   # 1. the CLI (skip if `treg --version` already works)
-treg login                                   # 2. sign in — opens a browser
+treg login                                   # 2. sign in, opens a browser
 treg mcp install                             # 3. register treg's tools into this agent
 ```
 
-Step 3 writes the token from step 2, so the order matters — run out of order it exits without
-writing anything. The tools (`catalog_search`, `catalog_get`, `call`, `balance`, `my_tools`) appear
-after the agent restarts; until then everything on this page works through the CLI.
+Step 3 writes the token from step 2, so the order matters: run out of order it exits without writing
+anything. The tools appear after the agent restarts; until then everything on this page works
+through the CLI.
 
-Step 1 also installs this same skill into the agent's own skills directory, which duplicates what
-the plugin already gives you — worth mentioning to the human, who can remove it.
+A new team starts with **$1.00 of free balance**, so there is nothing to pay before the first call.
+Never ask the human for a provider's API key, which is the thing treg exists to avoid.
 
 ---
 """
@@ -267,17 +276,11 @@ the plugin already gives you — worth mentioning to the human, who can remove i
 
 # variant -> (target, bootstrap, stamp_version). One source, five shop windows.
 #
-# Claude Code uses CLI_BOOTSTRAP: it gives the agent a terminal, does not ship a connector, and
-# `treg mcp install` writes a verified config for it. Cursor now ships MCP alongside the skill, so it
-# gets CURSOR_BOOTSTRAP which checks for the tools first and falls back to CLI if not.
-#
-# dsh gets its OWN bootstrap rather than sharing either: it is the only surface that ships the
-# connector and the CLI path in one install (the row is disabled until there is a token), and it is
-# the only one where `treg mcp install` is the wrong move — it writes configs for other agents, not
-# for a dsh profile.
+# dsh gets its OWN bootstrap rather than sharing one: it is the only surface where `treg mcp install`
+# is the wrong move, since it writes configs for other agents, not for a dsh profile.
 VARIANTS = {
     "codex": (CODEX_TARGET, None, False),
-    "claude": (CLAUDE_TARGET, CLI_BOOTSTRAP, True),
+    "claude": (CLAUDE_TARGET, CLAUDE_BOOTSTRAP, True),
     "cursor": (CURSOR_TARGET, CURSOR_BOOTSTRAP, True),
     "dsh": (DSH_TARGET, DSH_BOOTSTRAP, False),
     "minimax": (MINIMAX_TARGET, MINIMAX_BOOTSTRAP, True),
