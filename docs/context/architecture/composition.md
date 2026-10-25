@@ -7,6 +7,8 @@ sources:
   - src/treg/bootstrap_http.py
   - src/treg/worker.py
   - src/treg/infra/money_trace_runner.py
+  - src/treg/infra/loop_watchdog.py
+  - tests/test_loop_watchdog.py
   - src/treg/infra/money_admission_reporting.py
   - src/treg/call_surface.py
   - src/treg/application/connect.py
@@ -87,6 +89,13 @@ event handlers without changing the root logger or third-party loggers.
 The shared call surface uses one published snapshot for pause and atomic rate/concurrency
 admission before entering the call application; it adds no lifespan task, environment setting
 or database write.
+
+Every web role also starts `infra.loop_watchdog` (`TREG_LOOP_STALL_DUMP_S`, default 5 s, 0 off).
+The loop re-arms `faulthandler.dump_traceback_later` once a second; when a beat is that late,
+faulthandler's C thread writes every thread's stack to stderr, without the GIL or the logging
+locks, so a loop stuck in C code or behind a held logging lock still names the blocking call.
+One dump per stall; when the loop runs again it logs `loop_stall_end stalled_ms=…`. The money
+trace's `loop_lag_max_ms` says how long a stall lasted; this dump says where.
 
 Every role also owns an `infra.money_trace_runner` lifespan, independent of analytics enablement.
 It samples in-process money transactions and event-loop wakeup delay, and sends bounded diagnostic
