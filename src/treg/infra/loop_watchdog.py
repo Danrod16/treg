@@ -56,7 +56,7 @@ def start_loop_watchdog(threshold_s: float) -> LoopWatchdog | None:
         return None
     try:
         return LoopWatchdog(threshold_s).start()
-    except Exception:  # noqa: BLE001 - a missing diagnostic must never stop the service
+    except Exception:  # a missing diagnostic must never stop the service
         log.warning("loop watchdog unavailable", exc_info=True)
         return None
 
