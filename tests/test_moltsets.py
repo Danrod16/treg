@@ -6,7 +6,7 @@ import pytest
 
 from treg.application.call import service
 from treg.config import get_settings
-from treg.domain.capacity import collectors
+from treg.domain.capacity import collectors, sweep
 from treg.domain.capacity.policy import default_policy
 from test_marketplace_call import _balance, _entries, _fake_relay, platform_on  # noqa: F401 - pytest fixtures
 
@@ -102,6 +102,8 @@ async def test_capacity_probe_and_policy(five_hour, weekly, token_balance, expec
     assert row["value"] == expected and row["unit"] == "enrichment records"
     assert "search records 499/5h" in row["note"]
     assert "never substituted for enrichment capacity" in row["note"]
+    assert not any(word in row["note"].lower() for word in sweep._FORBIDDEN_IN_NOTE), \
+        "the sweep withholds a note that looks like a credential"
     policy = default_policy("moltsets", has_key=True)
     assert policy.capacity_type == "rolling_quota"
     assert policy.funding_mode == "subscription"

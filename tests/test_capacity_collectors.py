@@ -185,8 +185,11 @@ async def test_tavily_capacity_uses_key_credit_remainder():
     assert row == {
         "value": 875,
         "unit": "API credits",
-        "note": "key usage 125 of 1000; account pools are informational",
+        "note": "usage 125 of 1000; account pools are informational",
     }
+
+    assert not any(word in row["note"].lower() for word in sweep._FORBIDDEN_IN_NOTE), \
+        "the sweep withholds a note that looks like a credential"
 
 
 async def test_search1api_capacity_uses_free_usage_balance():
@@ -368,8 +371,11 @@ async def test_tavily_capacity_uses_account_pool_when_key_has_no_limit():
     assert row == {
         "value": 1085,
         "unit": "API credits",
-        "note": "key has no finite cap; remaining plan, PAYGO account pool(s)",
+        "note": "no finite cap on this credential; remaining plan, PAYGO account pool(s)",
     }
+
+    assert not any(word in row["note"].lower() for word in sweep._FORBIDDEN_IN_NOTE), \
+        "the sweep withholds a note that looks like a credential"
 
 
 @pytest.mark.parametrize("payload", [

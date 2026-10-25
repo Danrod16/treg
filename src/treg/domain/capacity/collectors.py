@@ -130,7 +130,7 @@ async def _tavily(c, key):
     key_remaining = remaining(meter, "usage", "limit")
     if key_remaining is not None:
         return {"value": key_remaining, "unit": "API credits",
-                "note": f"key usage {meter['usage']:g} of {meter['limit']:g}; account pools are informational"}
+                "note": f"usage {meter['usage']:g} of {meter['limit']:g}; account pools are informational"}
     # A key with no configured per-key cap returns `limit: null` even though its account plan has a
     # finite pool. That is the normal shape of an unrestricted Tavily key, not an unknown balance.
     account = d.get("account") or {}
@@ -141,9 +141,9 @@ async def _tavily(c, key):
         pools = ", ".join(name for name, value in (("plan", plan), ("PAYGO", paygo))
                           if value is not None)
         return {"value": sum(known), "unit": "API credits",
-                "note": f"key has no finite cap; remaining {pools} account pool(s)"}
+                "note": f"no finite cap on this credential; remaining {pools} account pool(s)"}
     return {"value": None, "unit": "API credits",
-            "note": "Usage response did not contain a finite key or account limit"}
+            "note": "Usage response did not contain a finite credential or account limit"}
 
 
 async def _serper(c, key):
@@ -346,7 +346,7 @@ async def _moltsets(c, key):
                 f"search records {left('search', 'records', '5h')}/5h, "
                 f"{left('search', 'records', '1w')}/week; requests "
                 f"{left('enrich', 'requests', '5h')}/5h enrichment, "
-                f"{left('search', 'requests', '5h')}/5h search. Phone/token balances are separate "
+                f"{left('search', 'requests', '5h')}/5h search. Phone and credit balances are separate "
                 "meters and are never substituted for enrichment capacity.",
     }
 
