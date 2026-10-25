@@ -91,11 +91,15 @@ admission before entering the call application; it adds no lifespan task, enviro
 or database write.
 
 Every web role also starts `infra.loop_watchdog` (`TREG_LOOP_STALL_DUMP_S`, default 5 s, 0 off).
-The loop re-arms `faulthandler.dump_traceback_later` once a second; when a beat is that late,
-faulthandler's C thread writes every thread's stack to stderr, without the GIL or the logging
-locks, so a loop stuck in C code or behind a held logging lock still names the blocking call.
-One dump per stall; when the loop runs again it logs `loop_stall_end stalled_ms=…`. The money
-trace's `loop_lag_max_ms` says how long a stall lasted; this dump says where.
+The loop only stamps a heartbeat once a second. A watchdog thread re-arms
+`faulthandler.dump_traceback_later` whenever it sees a fresh beat; when beats stop, nothing re-arms
+it and faulthandler's C thread writes every thread's stack, without the GIL or the logging locks,
+so a loop stuck in C code or behind a held logging lock still names the blocking call. The dump
+goes to a separate non-blocking descriptor for stderr reopened through `/proc` (re-arming waits for
+a running dump while holding the GIL, so a dump blocked on a full pipe would freeze the process); a
+full pipe drops it, and without `/proc` the watchdog does not start. One dump per stall; the
+watchdog thread then logs `loop_stall_end stalled_ms=…`. The money trace's `loop_lag_max_ms` says
+how long a stall lasted; this dump says where.
 
 Every role also owns an `infra.money_trace_runner` lifespan, independent of analytics enablement.
 It samples in-process money transactions and event-loop wakeup delay, and sends bounded diagnostic
