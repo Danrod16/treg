@@ -108,7 +108,7 @@ endpoints:
       query: openai
       limit: 20
   cost:
-    type: per_success
+    type: per_call
     value: 0.00075
     currency: USD
     unit: call
@@ -153,7 +153,7 @@ endpoints:
     body:
       handle: nasa
   cost:
-    type: per_success
+    type: per_call
     value: 0.00022
     currency: USD
     unit: call
@@ -207,7 +207,7 @@ endpoints:
     body:
       query: travel
   cost:
-    type: per_success
+    type: per_call
     value: 0.0015
     currency: USD
     unit: call
@@ -311,7 +311,7 @@ endpoints:
       query: best coffee maker
       limit: 1
   cost:
-    type: per_success
+    type: per_call
     value: 0.0009
     currency: USD
     unit: call
@@ -373,7 +373,7 @@ endpoints:
       query: hiring
       datePosted: last-week
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -436,7 +436,7 @@ endpoints:
       handle: levelsio
       limit: 20
   cost:
-    type: per_success
+    type: per_call
     value: 0.0005
     currency: USD
     unit: call
@@ -549,7 +549,7 @@ endpoints:
       location: United States
       limit: 3
   cost:
-    type: per_success
+    type: per_call
     value: 0.0005
     currency: USD
     unit: call
@@ -593,7 +593,7 @@ endpoints:
     body:
       handle: zachking
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -642,7 +642,7 @@ endpoints:
     body:
       url: https://www.linkedin.com/in/williamhgates
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -742,7 +742,7 @@ endpoints:
       location: Austin, TX
       limit: 1
   cost:
-    type: per_success
+    type: per_call
     value: 0.00175
     currency: USD
     unit: call
@@ -859,7 +859,7 @@ endpoints:
       limit: 10
       sort: relevance
   cost:
-    type: per_success
+    type: per_call
     value: 0.0143
     currency: USD
     unit: call
@@ -915,7 +915,7 @@ endpoints:
     body:
       url: https://www.instagram.com/reel/DWzrfE2kaY8/
   cost:
-    type: per_success
+    type: per_call
     value: 0.0015
     currency: USD
     unit: call
@@ -972,7 +972,7 @@ endpoints:
     body:
       handle: nasa
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -1020,7 +1020,7 @@ endpoints:
     body:
       handle: nasa
   cost:
-    type: per_success
+    type: per_call
     value: 0.0024
     currency: USD
     unit: call
@@ -1066,7 +1066,7 @@ endpoints:
     body:
       url: https://www.linkedin.com/in/patrickcollison
   cost:
-    type: per_success
+    type: per_call
     value: 0.0042
     currency: USD
     unit: call
@@ -1121,7 +1121,7 @@ endpoints:
     body:
       handle: levelsio
   cost:
-    type: per_success
+    type: per_call
     value: 0.00075
     currency: USD
     unit: call
@@ -1196,7 +1196,7 @@ endpoints:
       hashtag: skincare
       mediaType: reel
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -1244,7 +1244,7 @@ endpoints:
     body:
       handle: zachking
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -1292,7 +1292,7 @@ endpoints:
     body:
       url: https://www.instagram.com/reel/DWzrfE2kaY8/
   cost:
-    type: per_success
+    type: per_call
     value: 0.00144
     currency: USD
     unit: call
@@ -1352,7 +1352,7 @@ endpoints:
     body:
       query: funny
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -1400,7 +1400,7 @@ endpoints:
     body:
       url: https://www.tiktok.com/@zachking/video/7650468599424945422?_r=1&u_code=f0hj7d780760m9&preview_pb=0&sharer_language=en&_d=f0hj7blh067h71&share_item_id=7650468599424945422&source=h5_m
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -1457,7 +1457,7 @@ endpoints:
     body:
       url: https://www.facebook.com/groups/1270525996445602/
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -1509,7 +1509,7 @@ endpoints:
     body:
       url: https://www.facebook.com/nike
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -1553,7 +1553,7 @@ endpoints:
     body:
       url: https://www.facebook.com/reel/2166091230582141/
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -1630,7 +1630,7 @@ endpoints:
       query: cooking
       sortBy: 0
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -1673,7 +1673,7 @@ endpoints:
     body:
       url: https://www.tiktok.com/@washingtonpost/video/7609177768793787679
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -1750,7 +1750,7 @@ endpoints:
       hl: en
       query: openai
   cost:
-    type: per_success
+    type: per_call
     value: 0.00099
     currency: USD
     unit: call
@@ -1806,7 +1806,7 @@ endpoints:
     body:
       url: https://x.com/i/status/20
   cost:
-    type: per_success
+    type: per_call
     value: 0.0005
     currency: USD
     unit: call
@@ -1864,7 +1864,7 @@ endpoints:
       company: stripe
       limit: 3
   cost:
-    type: per_success
+    type: per_call
     value: 0.105
     currency: USD
     unit: call
@@ -1913,7 +1913,7 @@ endpoints:
         example: https://www.linkedin.com/in/satyanadella
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.011
     currency: USD
     unit: call
@@ -1960,7 +1960,7 @@ endpoints:
     body:
       prompt: How does photosynthesis work?
   cost:
-    type: per_success
+    type: per_call
     value: 0.0018
     currency: USD
     unit: call
@@ -2102,7 +2102,7 @@ endpoints:
       query: software engineer
       workplaceType: remote
   cost:
-    type: per_success
+    type: per_call
     value: 0.0286
     currency: USD
     unit: call
@@ -2151,7 +2151,7 @@ endpoints:
     body:
       query: chef
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -2233,7 +2233,7 @@ endpoints:
       limit: 3
       placeId: ChIJN1t_tDeuEmsRUsoyG83frY4
   cost:
-    type: per_success
+    type: per_call
     value: 0.0035
     currency: USD
     unit: call
@@ -2324,7 +2324,7 @@ endpoints:
       location: San Francisco, CA
       query: Blue Bottle Coffee
   cost:
-    type: per_success
+    type: per_call
     value: 0.00175
     currency: USD
     unit: call
@@ -2379,7 +2379,7 @@ endpoints:
     body:
       query: best coff
   cost:
-    type: per_success
+    type: per_call
     value: 0.00099
     currency: USD
     unit: call
