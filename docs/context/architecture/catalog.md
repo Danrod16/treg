@@ -2181,7 +2181,9 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   rides on.
 - **Adapters** — `adapters.yaml`, one per endpoint: `accepts` (identity variants), `in` (contract
   field → `queryParams.x` / `body.x`), `const` (fixed provider params), `out` (core field →
-  expression over the body), `miss`, and `route: false` for an adapter that only judges hit/miss
+  expression over the body), `miss`, optional `empty` (an expression true when the provider states
+  the SOURCE itself had nothing, such as Google matching no page, rather than that it failed to
+  read it; it must be false on the example), and `route: false` for an adapter that only judges hit/miss
   evidence (results, stats, cache admission) and never joins routing or the arena. Where the
   contract records a verdict, `verdicts` maps the provider's own words (normalized: lower case,
   spaces and hyphens to `_`) to the contract's (`ok: valid`, `accept_all: catch_all`); a word that
@@ -2276,7 +2278,11 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   under a 20000 envelope). A
   MISS tries the next candidate — the waterfall is ON by default (decided
   2026-08-28: the endpoint's job is to find the thing, and misses on the per-success children are
-  free); `X-Treg-Route-Waterfall: 0` stops at the first miss. A child that charges nothing (not
+  free); `X-Treg-Route-Waterfall: 0` stops at the first miss. A miss whose adapter `empty` holds
+  also stops it: on `google.serp.organic` an empty list from one provider is usually that provider
+  failing to read the page, so
+  empty stays a miss, but when a provider says Google itself matched nothing, every other provider
+  could only bill the same nothing. The answer is a 200 miss served by that child, at its charge. A child that charges nothing (not
   billable, or a provider-reported zero such as a free miss) releases its hold at once, before the
   next child reserves: holding it to the end made a balance that covers each child in turn answer
   a false 402 mid-waterfall. **A billed child never settles its own
