@@ -6104,9 +6104,12 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
         print(f"\n{_A}ROUTES AMONG{_R}  {_M}in this order; a key of yours for a provider goes first, free{_R}")
         for i, c in enumerate(routing["plan"], 1):
             accepts = " | ".join("+".join(v) for v in (c.get("accepts") or []))
-            price = f"${c['usd']:.4g}" if c.get("usd") is not None else "—"
+            price = (f"${c['usd']:.4g}" + (f"/{c['per']}" if c.get("per") else "")) if c.get("usd") is not None else "—"
             flag = f"  {_AM}exhausted{_R}" if c.get("exhausted") else ""
-            print(f"  {i:<3}{_clip(c['endpoint_id'], 38):<38} {price:<9} {accepts}{flag}")
+            ignores = f"  {_M}ignores {', '.join(c['ignores'])}{_R}" if c.get("ignores") else ""
+            print(f"  {i:<3}{_clip(c['endpoint_id'], 38):<38} {price:<17} {accepts}{flag}{ignores}")
+        if any(c.get("ignores") for c in routing["plan"]):
+            _dim("  a provider that ignores a filter you send ranks after the providers that apply it")
         _dim("  a miss tries the next one (ceiling $1 per call by default); --header 'X-Treg-Route-Max-Cost: 0.05' to cap it,")
         _dim("  --header 'X-Treg-Route-Waterfall: 0' to stop at the first miss,")
         _dim("  --header 'X-Treg-Route-Strict-Filters: 1' to refuse (422, unbilled) rather than call a provider that ignores a filter you sent")

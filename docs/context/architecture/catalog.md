@@ -2230,11 +2230,15 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   carries the range. Never hand-written; not in any
   provider file.
   `catalog_get` on it returns the contract and the ranked **plan** (the quote) —
-  nothing is reserved. A child the router would not call on treg's key (paused, not
+  nothing is reserved. A quote row names `per` when its price buys one input entity (a keyword)
+  rather than the call, and `ignores` the contract filters its adapter never sends: the quote is
+  ranked for a request that sends no filter, and a caller who sends one of those (`language` to
+  a keyword-volume child that has no language field) gets that child ranked after the rest. A child the router would not call on treg's key (paused, not
   `platform_eligible`, no key on this deployment) ranks after the rest with a `skipped` reason.
 - **Ranking** — `routing/plan.py`: own keys (tier 2) first at cost 0; then
   `expected_cost_per_hit = cost_at(request) × P(billed) / P(hit)` where `cost_at` prices *this*
-  request at its requested size (per-result × limit, credit-with-minimum rounded up) and `P(hit)`
+  request at its requested size (per-result × limit, per-entity × the entities it names, such as
+  SE Ranking's price per keyword × `keywords`, credit-with-minimum rounded up) and `P(hit)`
   is the measured hit rate when ≥ 20 decided samples exist, else `ok_rate`, else 1.0 (flagged
   `unmeasured`). `build_plan` reads that evidence through bootstrap's shared process cache; cold or
   unavailable observations degrade to unmeasured ranking while the cache refreshes off the request
