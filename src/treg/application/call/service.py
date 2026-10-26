@@ -329,6 +329,14 @@ def _gateway_request_failure(exc: httpx.RequestError) -> GatewayFailed:
         detail=f"upstream request failed: {str(exc) or type(exc).__name__}")
 
 
+def _no_answer(exc: CallFailure) -> bool:
+    """The upstream request failed in transit: a timeout, or a connection refused, reset or cut.
+    A full connection pool is treg's own, not the vendor's."""
+    cause = exc.__cause__
+    return (isinstance(cause, (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError))
+            and not isinstance(cause, httpx.PoolTimeout))
+
+
 def _now_ms() -> int:
     """A monotonic millisecond stamp for measuring a call's duration."""
     return int(time.monotonic() * 1000)
@@ -1548,6 +1556,14 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
             except asyncio.CancelledError:
                 await _finish_cancelled_call(request, mk, call_ref, response)
                 raise
+        if metered and _no_answer(exc):
+            # The vendor gave treg's key no answer: an outage strike for the router, after the
+            # release, on its own session (`_note_capacity_signal` never raises).
+            try:
+                await _note_capacity_signal(mk, None, None, b"")
+            except asyncio.CancelledError:
+                await _finish_cancelled_call(request, mk, call_ref, response)
+                raise
         if metered or free_poll:
             # The shared exception handler builds the response and adds this zero-cost result.
             request.state.call_cost_micro = 0
@@ -1678,7 +1694,8 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
             except asyncio.CancelledError:
                 await _finish_cancelled_call(request, mk, call_ref, response)
                 raise
-        elif response.status < 300:  # a 2xx that says the account is out is no recovery
+        elif response.status < 300 and not served_hit:
+            # A 2xx that says the account is out is no recovery, and an archived one is no answer.
             try:
                 await _note_capacity_recovery(mk)
             except asyncio.CancelledError:

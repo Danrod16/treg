@@ -1451,23 +1451,31 @@ async def _finish_cancelled_call(
             # same cleanup task so compensation completes before the original cancellation escapes.
             continue
     await cleanup
-async def _note_capacity_signal(mk: MarketplaceCall, status_code: int, headers, body: bytes) -> str | None:
+async def _note_capacity_signal(mk: MarketplaceCall, status_code: int | None, headers,
+                                body: bytes) -> str | None:
     """After a tier-4 answer: did the provider just tell us OUR account is out? A confirmed balance/
     quota signature (domain.capacity.signatures) is a strike on the breaker (domain.capacity.marks);
     the second strike locks the provider so the next call is refused before a hold exists.
-    Burst/unknown 429s only log (D′ smooths them). Runs after the settle, on its own short session,
-    and never raises. Platform tier only: an org's own key running dry is the org's business, and an
-    oauth-billed connect has no shared account to mark. Returns the signal kind for the audit funnel."""
+    Burst/unknown 429s only log (D′ smooths them). A 5xx, or no answer at all (`status_code`
+    None: a timeout or transport error), is an `outage` strike on the endpoint, which only the
+    router reads. Runs after the settle, on its own short session, and never raises. Platform tier
+    only: an org's own key running dry or timing out is the org's business, and an oauth-billed
+    connect has no shared account to mark. Returns the signal kind for the audit funnel."""
     if mk.tier != "platform":
         return None
     signal = None
     try:
-        signal = capacity_signatures.classify(mk.provider, status_code, headers, body[:4096])
+        if status_code is not None:
+            signal = capacity_signatures.classify(mk.provider, status_code, headers, body[:4096])
+        if signal is None and capacity_signatures.is_outage(status_code):
+            signal = capacity_signatures.Signal(
+                capacity_marks.OUTAGE, None, None,
+                detail="no answer" if status_code is None else f"HTTP {status_code}")
         if signal is None:
             return None
         where = {"provider": mk.provider, "slot": keyslots.capacity_slot(mk.key_slot),
                  "endpoint_id": mk.endpoint_id, "kind": signal.kind, "status": status_code}
-        if capacity_signatures.is_exhausting(signal):
+        if capacity_signatures.is_exhausting(signal) or signal.kind == capacity_marks.OUTAGE:
             lock = await capacity_marks.strike(
                 mk.provider, endpoint_id=mk.endpoint_id, kind=signal.kind,
                 resets_at=signal.resets_at, slot=keyslots.capacity_slot(mk.key_slot),
@@ -1503,17 +1511,23 @@ async def _note_capacity_recovery(mk: MarketplaceCall) -> None:
     try:
         await capacity_view.load()
         cleared = False
+        slot = keyslots.capacity_slot(mk.key_slot)
         # A free route's 2xx says nothing about the balance: it clears only its endpoint's own row.
-        for lock in capacity_view.locks(mk.provider, mk.endpoint_id, keyslots.capacity_slot(mk.key_slot),
-                                        metered=capacity_marks.spends_balance(mk.cost_type)):
-            if lock.is_active() and lock.lock_id != mk.probe_lock_id:
+        # Any 2xx is an answer, so it clears the endpoint's outage row whatever it was admitted as.
+        outage = capacity_view.outage_lock(mk.provider, mk.endpoint_id, slot)
+        for lock in capacity_view.locks(mk.provider, mk.endpoint_id, slot,
+                                        metered=capacity_marks.spends_balance(mk.cost_type)) + (
+                                            [outage] if outage is not None else []):
+            lock_id = lock.lock_id if lock is outage else mk.probe_lock_id
+            if lock.is_active() and lock.lock_id != lock_id:
                 continue
-            if await capacity_marks.clear(lock.key, lock_id=mk.probe_lock_id):
+            if await capacity_marks.clear(lock.key, lock_id=lock_id):
                 cleared = True
                 if lock.is_active():
                     capacity_events.emit(
-                        "lock_cleared", provider=mk.provider, slot=keyslots.capacity_slot(mk.key_slot),
-                        endpoint_id=mk.endpoint_id, key=lock.key, lock_id=lock.lock_id, via="probe",
+                        "lock_cleared", provider=mk.provider, slot=slot,
+                        endpoint_id=mk.endpoint_id, key=lock.key, lock_id=lock.lock_id,
+                        via="answer" if lock is outage else "probe",
                         locked_s=int((_utcnow_naive() - (lock.opened_at or lock.first_signal_at))
                                      .total_seconds()))
         if ((mk.probe_lock_id or "").startswith(capacity_marks.SWEEP_PROBE)

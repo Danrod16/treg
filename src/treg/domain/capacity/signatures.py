@@ -14,7 +14,8 @@ one thing everywhere. Pure functions over (provider, status, headers, body).
   unrecorded - a 4xx no row matched whose body still names credits/quota/balance → NEVER exhausted,
              only logged/counted: the tripwire for a vendor whose out-of-credit answer is not in
              the table yet
-  None     — not a capacity signal at all (caller-caused 4xx, 5xx, success)
+  None     - not a capacity signal at all (caller-caused 4xx, 5xx, success); a 5xx or a transport
+             failure is an outage instead (`is_outage`), never an exhausted account
 """
 
 from __future__ import annotations
@@ -281,3 +282,11 @@ def is_exhausting(signal: Signal | None) -> bool:
     """Does this signal mark the account exhausted? Only confirmed balance/quota signatures do;
     burst, unknown, edge_block and unrecorded never refuse a call (plan §4.1)."""
     return signal is not None and signal.kind in EXHAUSTING_KINDS
+
+
+def is_outage(status: int | None) -> bool:
+    """Did treg's key reach the endpoint and get no answer? `None` is a transport failure (a
+    timeout, a refused or dropped connection). 501 says the method is not implemented, a fact
+    about the request rather than the vendor's health. An outage refuses no call; it steers the
+    router (`marks.py`)."""
+    return status is None or (status >= 500 and status != 501)

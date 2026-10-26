@@ -15,6 +15,7 @@ sources:
   - src/treg/domain/capacity/marks.py
   - src/treg/domain/capacity/events.py
   - tests/test_capacity_protect.py
+  - tests/test_capacity_outage.py
   - src/treg/infra/upstream/limiter.py
   - src/treg/domain/capacity/overflow_spend.py
   - src/treg/domain/capacity/routes_view.py
@@ -380,7 +381,14 @@ quota gate. BYOK calls bypass it.
   balance, so the provider's balance row and the sweep's reading neither refuse it nor take its 2xx
   as recovery; only its endpoint's own (quota) row applies. Dropleads answers free searches at zero
   credits, and their 2xx kept erasing the paid routes' strikes and lifting the zero reading.
-  See `architecture/proxy-model.md`.
+  An archived answer is no vendor answer: it clears nothing.
+  An **outage** (treg's key got no answer from the endpoint: a timeout, a refused or cut
+  connection, or a 5xx other than 501) runs the same ladder under its own row
+  `outage:<endpoint_id>[#slot]`: the third strike within 10 min, with no 2xx between, locks for
+  10 min. It refuses no call; only the router (the child is dropped from the plan) and `keyslots.assign`
+  (another account first) read it. Any 2xx on treg's key for the endpoint clears it. A strike within
+  10 min of an outage lock expiring uncleared reopens it at once for twice as long, at most 1 h: the
+  calls the expiry let through are its probe. See `architecture/proxy-model.md`.
 - **`view.py`** - `LatestStateView`: the in-process copy of both namespaces, reloaded from
   ratestore on a 60 s TTL by an explicit `await load()`; `is_exhausted(provider, endpoint_id)`
   and friends are sync and I/O-free so `resolve` can read them without breaking its rule. A
@@ -574,6 +582,8 @@ The call path reads the view and runs the breaker (`marks.py`); the mechanics an
 `interface/api.md`. In one line: locked provider or endpoint → 503 before any hold, with
 alternatives named, one probe a minute excepted; two balance/quota signatures in a row on treg's
 key → lock; the probe's 2xx → open, whether the lock or the sweep's reading refused it. Burst 429s are smoothed (D′). Tiers 1/2 untouched.
+Three timeouts or 5xx in a row on treg's key → an outage lock: routed plans skip the endpoint, a
+direct call is still relayed, and any 2xx reopens it.
 
 A signature the call could not avoid (the strike itself, a probe through a lock, a free route) is
 relayed as the provider answered, with `X-Treg-Capacity: exhausted` so the caller is told it is
@@ -588,9 +598,10 @@ away from everyone.
 The breaker tells an operator through `capacity {json}` lines (`events.py`, logger
 `treg.capacity_events`), one per event: `strike` (pending), `lock_opened` (written once, by the
 strike that turned the row active, stored as the lock's `opened_at`), `lock_cleared` (a probe's
-2xx, `via` `probe` or `sweep_probe`, with `locked_s` counted from `opened_at`, not the first
+2xx, `via` `probe` or `sweep_probe`, or `answer` for an outage row, with `locked_s` counted from `opened_at`, not the first
 pending strike), `unrecorded` (with the tripwire's phrase), `edge_block` and `rate`. Each carries
-`provider`, `slot`, `endpoint_id`, `kind` and the upstream `status`; never the vendor's body. A
+`provider`, `slot`, `endpoint_id`, `kind` (`outage` included) and the upstream `status` (null when
+nothing answered); never the vendor's body. A
 signature meeting a lock already in place emits nothing: the `request` line (`org-traffic.md`)
 carries every refused or relayed call with its `provider`, `credential_tier` and `refused_by`. An
 expired guessed hold that is still dry opens again on its next two strikes, so a lock that nobody

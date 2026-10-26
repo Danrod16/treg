@@ -103,6 +103,8 @@ _GLOBAL_REFUSALS = frozenset({"insufficient_balance", "tag_spend_cap_reached",
                               "platform_daily_cap_reached", "daily_cap_reached"})
 
 
+OUTAGE_WHY = ("failing on treg's key right now (timeouts or server errors, no success since); "
+              "skipped until it answers again")
 MAX_WEAK_FALLBACKS = 2   # extra providers asked after a thin-but-real answer (see min_results)
 CHEAP_RETRY_MICRO = 10_000  # ≤ 1¢: a per_call provider cheap enough to be asked after another's 4xx
 ROUTED_ASYNC_WAIT_SECONDS = 60
@@ -350,6 +352,11 @@ async def build_plan(ep: dict, identity_given: dict, caller, options: RouteOptio
             # priceable, but this deployment holds no key for the provider: the child would answer
             # "no credential" (a 404 the router must not treat as the caller's fault).
             dropped.append({"endpoint_id": e["id"], "why": f"no {e['provider']} key on this deployment and no own key"})
+            continue
+        if tier == "platform" and keyslots.all_down(e["provider"], e["id"]):
+            # An outage lock (domain.capacity.marks): the next caller would wait out a timeout to
+            # learn the same thing. Overflow relays the same vendor, so it is no way around it.
+            dropped.append({"endpoint_id": e["id"], "why": OUTAGE_WHY})
             continue
         if c.exhausted:
             dropped.append({"endpoint_id": e["id"], "why": "treg's account for this provider is exhausted right now"})

@@ -16,6 +16,14 @@ per `PROBE_EVERY_S`; that call's 2xx clears the lock (conditionally on the lock 
 under, so a late probe cannot erase a newer lock). Nothing else clears it except `until`: a guessed
 hold lasts `DEFAULT_LOCK`, a vendor-stated reset at most `MAX_LOCK`.
 
+An `outage` (treg's key reached the endpoint and got no answer: a transport timeout or error, or a
+5xx) is the same ladder under its own key (`outage:<endpoint_id>`), never read by `view.locks`, so
+it never refuses a call: only the router and `keyslots.assign`, which have another child or account
+to use, read it (`view.outage_lock`). It locks on the `OUTAGE_STRIKES`th strike, for `OUTAGE_LOCK`;
+any 2xx on treg's key for the endpoint clears it, a direct call being relayed as usual. A strike
+landing within `STRIKE_WINDOW` after an outage lock expired uncleared locks again at once, for
+twice as long up to `OUTAGE_MAX_LOCK`: the calls the expiry let through were its probe.
+
 The sweep's own exhausted reading (`capacity:state:<provider>`) gets the same probe: without one, a
 top-up stays refused until the next sweep. A probe's 2xx lifts that reading (`clear_sweep_state`),
 conditionally on the reading it was admitted under, so a newer sweep's word stands.
@@ -43,6 +51,10 @@ DEFAULT_LOCK = timedelta(hours=1)
 MAX_LOCK = timedelta(hours=6)
 PROBE_EVERY_S = 60.0
 SWEEP_PROBE = "sweep:"
+OUTAGE = "outage"
+OUTAGE_STRIKES = 3
+OUTAGE_LOCK = timedelta(minutes=10)
+OUTAGE_MAX_LOCK = timedelta(hours=1)
 
 log = logging.getLogger("treg.capacity")
 
@@ -55,9 +67,13 @@ def spends_balance(cost_type: str | None) -> bool:
 
 
 def lock_key(provider: str, endpoint_id: str | None, kind: str, slot: str | None = None) -> str:
-    """Provider for a balance signature, endpoint for a quota one; a further treg-owned account
-    (`slot`) runs dry on its own, so its rows are its own (`<key>#<slot>`)."""
-    key = endpoint_id if kind == "quota" and endpoint_id else provider
+    """Provider for a balance signature, endpoint for a quota one, `outage:<endpoint>` for an
+    outage; a further treg-owned account (`slot`) runs dry on its own, so its rows are its own
+    (`<key>#<slot>`)."""
+    if kind == OUTAGE and endpoint_id:
+        key = f"{OUTAGE}:{endpoint_id}"
+    else:
+        key = endpoint_id if kind == "quota" and endpoint_id else provider
     return f"{key}#{slot}" if slot else key
 
 
@@ -96,23 +112,33 @@ class Lock:
 async def strike(provider: str, *, endpoint_id: str | None, kind: str,
                  resets_at: datetime | None, note: str = "", immediate: bool = False,
                  now: datetime | None = None, slot: str | None = None) -> Lock | None:
-    """One balance/quota signature on treg's own account. Returns the row as written (active or
-    pending), or None when nothing could be written. `immediate` locks on the first strike."""
+    """One balance/quota/outage signature on treg's own account. Returns the row as written
+    (active or pending), or None when nothing could be written. `immediate` locks on the first
+    strike."""
     now = now or utcnow_naive()
     key = lock_key(provider, endpoint_id, kind, slot)
+    outage = key.startswith(f"{OUTAGE}:")
     try:
         async with session_maker() as db:
             raw = await ratestore.kv_get(db, LOCK_NS, key)
             prev = Lock.from_json(raw) if raw else None
             if prev is not None and prev.is_active(now):
                 return prev
+            hold = None
+            if (outage and prev is not None and prev.until is not None
+                    and now - prev.until <= STRIKE_WINDOW):
+                # no 2xx since the lock it expired from: still down
+                immediate = True
+                hold = min(2 * (prev.until - (prev.opened_at or prev.first_signal_at)), OUTAGE_MAX_LOCK)
             if prev is not None and not immediate and now - prev.first_signal_at < STRIKE_MIN_GAP:
                 return prev  # the same burst as the first strike
             fresh = prev is None or now - prev.first_signal_at > STRIKE_WINDOW
             strikes = 1 if fresh else prev.strikes + 1
             first_at = now if fresh else prev.first_signal_at
             until = None
-            if immediate or strikes >= 2:
+            if outage and (immediate or strikes >= OUTAGE_STRIKES):
+                until = now + max(hold or OUTAGE_LOCK, OUTAGE_LOCK)
+            elif not outage and (immediate or strikes >= 2):
                 until = min(resets_at or now + DEFAULT_LOCK, now + MAX_LOCK)
             lock = Lock(key, provider, secrets.token_hex(8), strikes, first_at, until, note[:200],
                         opened_at=now if until is not None else None, opened=until is not None)
