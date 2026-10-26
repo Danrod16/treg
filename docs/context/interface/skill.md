@@ -52,7 +52,8 @@ price without asking and report `X-Treg-Cost-Micro` after; only before a generat
 over many inputs, say the expected total and keep a running sum against it, because
 `X-Treg-Route-Max-Cost` caps each call and does not add up across calls. Where a provider accepts
 a ceiling parameter, the remaining ceiling is forwarded upstream so settlement cannot exceed it;
-elsewhere the header is a pre-reservation guard. Provider-specific detail
+elsewhere the header is a pre-reservation guard on a direct call and a cap on a routed call's
+total. Provider-specific detail
 (a provider's allowance, voice discovery, pricing provenance) lives on its catalog row as a `note`,
 which `catalog get` shows, not in either file.
 

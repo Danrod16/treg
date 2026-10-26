@@ -1049,7 +1049,8 @@ largest provider charge that still settles within the remaining ceiling after pl
 (the ceiling itself when the margin is 0), and never replaces a value the caller already sent,
 so settlement on a provider that reports its own charge cannot exceed the ceiling. The
 provider's refusal is a non-2xx and is not charged. For every other provider the header remains a
-pre-reservation guard. Asked for by a customer whose runner approved $0.23 and was billed $0.56 (2026-09-04).
+pre-reservation guard on a direct call; on a routed call it also caps each child's settlement, so
+the routed total never passes it (money.md, Caller cost ceilings). Asked for by a customer whose runner approved $0.23 and was billed $0.56 (2026-09-04).
 
 Metered responses also carry `X-Treg-Cost-Micro`; a reserved call that fails before a provider answer
 carries an explicit `0`. That `0` is what the call ends up costing, but the **balance can lag it**:

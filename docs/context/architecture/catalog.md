@@ -2286,7 +2286,9 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   `released_micro` names what the providers billed treg. A crash between the two leaves the holds
   to the reaper, which releases in the caller's favour. `X-Treg-Route-Max-Cost` (default $1)
   bounds the sum before each reserve (a candidate
-  that would breach it is `skipped`). Before any child runs, the route returns 402
+  that would breach it is `skipped`) and at each settle: a child whose provider reports more than
+  its estimate settles at the remaining ceiling (money.md, Caller cost ceilings), so the routed
+  total never passes it. Before any child runs, the route returns 402
   `route_max_cost` (`cheapest_micro`, `plan`, `charged_micro: 0`) only when no candidate's
   `price_micro` fits the ceiling, and that detail names the minimum price rather than the
   first-ranked candidate: on a search `rank` puts specificity ahead of price, so a dearer
