@@ -455,8 +455,9 @@ def _body_limit(body: bytes) -> int | None:
         val = doc.get(name)  # one row per item: moz targets, dataforseo keywords, companyenrich domains, brightdata urls, lusha contacts/companies
         if isinstance(val, list) and val:
             return len(val)
-    # icypeas / lusha: {"pagination": {"size": 10}}; influencersclub: {"paging": {"limit": 10}}.
-    for envelope in ("pagination", "paging"):
+    # icypeas / lusha: {"pagination": {"size": 10}}; influencersclub: {"paging": {"limit": 10}};
+    # a JSON-RPC call (serpstat): {"params": {"size": 10}}.
+    for envelope in ("pagination", "paging", "params"):
         nested = doc.get(envelope)
         if isinstance(nested, dict):
             for name in _LIMIT_PARAMS:

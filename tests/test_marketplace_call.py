@@ -3199,10 +3199,21 @@ def test_row_counts_never_bill_above_the_hold():
     mk, estimate, _ = _priced("findymail.search.employees", None,
                               {"website": "x.io", "job_titles": ["CEO"], "count": 5})
     assert call_settle._observed_cost_micro(mk, json.dumps([{"name": str(i)} for i in range(5)]).encode()) == estimate
-    mk, estimate, _ = _priced("serpstat.google.domain.ranked_keywords", None,
-                              {"params": {"domain": "a.com", "se": "g_us", "size": 1000}})
+    mk, estimate, per_keyword = _priced("serpstat.google.keywords.volume", None,
+                                        {"params": {"keywords": ["a", "b"], "se": "g_us"}})
+    assert estimate == 2 * per_keyword
     assert call_settle._observed_cost_micro(
         mk, json.dumps({"id": "1", "result": {"data": [{}] * 1000}}).encode()) == estimate
+
+
+def test_a_json_rpc_page_size_sets_the_hold():
+    """Serpstat's page size rides in the JSON-RPC `params`: the hold is the page asked for, so a
+    full page settles every row the vendor billed instead of the 20-row default."""
+    mk, estimate, per_row = _priced("serpstat.web.backlinks.list", None,
+                                    {"params": {"query": "example.com", "searchType": "domain", "size": 50}})
+    assert estimate == 50 * per_row
+    body = json.dumps({"id": "1", "result": {"data": [{}] * 50}}).encode()
+    assert call_settle._observed_cost_micro(mk, body) == 50 * per_row
 
 
 def test_thecompaniesapi_simplified_is_free_only_where_declared():
