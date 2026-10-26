@@ -383,7 +383,7 @@ endpoints:
         required: false
   test_request: {queryParams: {"company_domain": "microsoft.com", "first_name": "Satya", "last_name": "Nadella"}}
   cost:
-    type: per_success
+    type: per_call
     value: 2
     currency: credit
     per: 1
@@ -392,6 +392,7 @@ endpoints:
     source_url: https://enrichlayer.com/docs
     checked: '2026-10-01'
     confidence: verified
+    note: "Charged on every 200, a null match included. Enrichlayer bills a no-match unless similarity_checks=skip, which treg's key does not accept."
   verified: '2026-10-01'
   added: '2026-09-30'
   example_response: examples/enrichlayer.person.lookup.json
@@ -419,7 +420,7 @@ endpoints:
         required: false
   test_request: {queryParams: {"role": "CEO", "company_name": "Microsoft"}}
   cost:
-    type: per_success
+    type: per_call
     value: 3
     currency: credit
     per: 1
@@ -428,6 +429,7 @@ endpoints:
     source_url: https://enrichlayer.com/docs
     checked: '2026-10-01'
     confidence: verified
+    note: Charged on every 200, including when no matching profile is found.
   verified: '2026-10-01'
   added: '2026-09-30'
   example_response: examples/enrichlayer.company.role.lookup.json
@@ -458,7 +460,7 @@ endpoints:
         required: false
   test_request: {queryParams: {"company_domain": "microsoft.com"}}
   cost:
-    type: per_success
+    type: per_call
     value: 2
     currency: credit
     per: 1
@@ -467,6 +469,7 @@ endpoints:
     source_url: https://enrichlayer.com/docs
     checked: '2026-10-01'
     confidence: verified
+    note: Charged on every 200, including when no matching company is found.
   verified: '2026-10-01'
   added: '2026-09-30'
   example_response: examples/enrichlayer.company.lookup.json
@@ -577,7 +580,7 @@ endpoints:
         required: false
   test_request: {queryParams: {"email": "satyan@microsoft.com"}}
   cost:
-    type: per_success
+    type: per_call
     value: 3
     currency: credit
     per: 1
@@ -586,6 +589,7 @@ endpoints:
     source_url: https://enrichlayer.com/docs
     checked: '2026-10-01'
     confidence: verified
+    note: "Charged on every 200, a null profile included. Enrichlayer bills a no-match at the default lookup_depth=deep, and treg's key does not accept lookup_depth=superficial."
   verified: '2026-10-01'
   added: '2026-09-30'
   example_response: examples/enrichlayer.person.reverse-email.json
@@ -616,6 +620,7 @@ endpoints:
     source_url: https://enrichlayer.com/docs
     checked: '2026-10-01'
     confidence: documented
+    note: Charged only when a social profile is found; an all-null answer is free.
   verified: '2026-10-01'
   added: '2026-09-30'
   example_response: examples/enrichlayer.contacts.reverse-phone.json
