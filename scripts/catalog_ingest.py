@@ -1536,6 +1536,9 @@ def _anyapi_cost(api: dict) -> dict:
     off a page (domain/catalog/store.COST_SOURCES); the rate-card fallback keeps `rate_card_api`.
     `reported_charge` stays on every row either way: `costUsd` is the only number that knows which
     source served and how many rows came back, and it is what settles.
+
+    `per_call`, not `per_success`: AnyAPI bills a 2xx not-found or an empty search page through
+    `costUsd` like any other answer, so a miss is not free and the router must price it as paid.
     """
     measured = (None if api["id"] in ANYAPI_CORE_ROWS_PRICED_AT_CHEAPEST_SOURCE
                 else _anyapi_measured().get(api["id"]))
@@ -1544,7 +1547,7 @@ def _anyapi_cost(api: dict) -> dict:
         price = max(price, _anyapi_flat_floor(api))
         price = min(price, api["pricing"].get("failoverMaxUsd") or price)
     return {
-        "type": "per_success",
+        "type": "per_call",
         "value": price,
         "currency": "USD",
         "unit": "call",
