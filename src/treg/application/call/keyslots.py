@@ -9,8 +9,8 @@ A provider can sit behind several treg-owned accounts (`TREG_PLATFORM_ACCOUNTS`,
 2. A call carrying an Idempotency-Key uses the account the key hashes to, so a retry that reaches
    the provider again lands where the provider can recognise it. Adding or removing an account can
    move a key; a retry across that change is a new request to the provider.
-3. Otherwise an account not out of capacity whose rate bucket would make the call wait least; ties
-   rotate per provider. This one
+3. Otherwise an account not out of capacity, and not in an outage for the endpoint when another
+   is not, whose rate bucket would make the call wait least; ties rotate per provider. This one
    is chosen right before the relay, not during resolution, so the choice and the token it takes
    happen in one step.
 
@@ -123,6 +123,12 @@ def all_exhausted(service: str, endpoint_id: str, *, metered: bool = True) -> bo
     return all(exhausted(service, endpoint_id, slot, metered=metered) for slot in _labels(service))
 
 
+def all_down(service: str, endpoint_id: str) -> bool:
+    """Every account of the provider is in an outage lock for this endpoint (`marks.py`)."""
+    return all(capacity_view.is_down(service, endpoint_id, capacity_slot(slot))
+               for slot in _labels(service))
+
+
 def assign(mk) -> None:
     """Give a platform call that resolution left open (`mk.key_slot is None`) its account: the
     one not out of capacity with a free concurrency place (`fair_share`) whose smoothing bucket
@@ -134,7 +140,9 @@ def assign(mk) -> None:
     metered = spends_balance(mk.cost_type)
     slots = [slot for slot in _labels(mk.provider)
              if not exhausted(mk.provider, mk.endpoint_id, slot, metered=metered)]
-    slots = slots or _labels(mk.provider)
+    slots = ([slot for slot in slots
+              if not capacity_view.is_down(mk.provider, mk.endpoint_id, capacity_slot(slot))]
+             or slots or _labels(mk.provider))
     start = next(_rotation.setdefault(mk.provider, itertools.count(random.randrange(1 << 16)))) % len(slots)
     mk.key_slot = min(slots[start:] + slots[:start],
                       key=lambda slot: (fair_share.queued(capacity_key(mk.provider, slot)),

@@ -13,9 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..application import catalog_find as find
 from ..application import feedback as feedback_app
+from ..application.call import keyslots
+from ..application.call.route import OUTAGE_WHY
 from ..config import get_settings
 from ..infra.db import get_session
 from ..domain.capacity.routes_view import view as overflow_routes_view
+from ..domain.capacity.view import view as capacity_view
 from ..domain.catalog import store as catalog_store
 from ..domain.catalog import stats as endpoint_stats
 
@@ -222,6 +225,8 @@ def _quote_skip(ep: dict, cat) -> str | None:
         return "not platform-eligible and no own key"
     if not get_settings().platform_key_for(ep["provider"]):
         return f"no {ep['provider']} key on this deployment and no own key"
+    if keyslots.all_down(ep["provider"], ep["id"]):
+        return OUTAGE_WHY
     return None
 
 
@@ -662,6 +667,10 @@ async def catalog_endpoint(
         # at a one-row lookup. Own keys rank first at call time (this route is open, so it cannot
         # know the caller's); nothing is reserved here.
         from ..domain.catalog.routing.plan import Candidate, cost_at, rank
+        try:
+            await capacity_view.load()  # the router's outage locks, for `_quote_skip`
+        except Exception:
+            logging.getLogger("treg.catalog").warning("capacity view unavailable", exc_info=True)
         contract = cat.contracts.get(ep["capability"])
         kids = [cat.by_id[i] for i in ep.get("routed_children") or [] if i in cat.by_id]
         cands = []

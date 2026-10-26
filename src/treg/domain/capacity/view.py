@@ -15,7 +15,7 @@ from sqlalchemy import select
 from ...infra.db import session_maker
 from ...models import Ephemeral
 from ...timeutil import utcnow_naive
-from .marks import LOCK_NS, Lock, lock_key
+from .marks import LOCK_NS, OUTAGE, Lock, lock_key
 from .policy import _CONCURRENCY, _ENDPOINT_RATE_LIMITS, _RATE_LIMITS, LatestState
 from .sweep import STATE_NS
 
@@ -53,6 +53,15 @@ class LatestStateView:
         (a quota) speaks for it, never the provider's balance row."""
         keys = [lock_key(k, None, "", slot) for k in (endpoint_id, provider if metered else None) if k]
         return [lock for k in keys if (lock := self._locks.get(k)) is not None]
+
+    def outage_lock(self, provider: str, endpoint_id: str, slot: str | None = None) -> Lock | None:
+        """The endpoint's outage row on this account, pending, active or expired uncleared. Never
+        part of `locks`: an outage refuses no call, it only steers the router and `keyslots`."""
+        return self._locks.get(lock_key(provider, endpoint_id, OUTAGE, slot))
+
+    def is_down(self, provider: str, endpoint_id: str, slot: str | None = None) -> bool:
+        lock = self.outage_lock(provider, endpoint_id, slot)
+        return lock is not None and lock.is_active()
 
     def active_lock(self, provider: str, endpoint_id: str | None = None,
                     slot: str | None = None, *, metered: bool = True) -> Lock | None:

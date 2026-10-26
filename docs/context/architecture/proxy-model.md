@@ -484,7 +484,8 @@ Capacity is per account. A balance or quota signature strikes and locks only the
 answered (`marks.lock_key(..., slot)`: the primary keeps the provider's own key, a further account
 `<key>#<label>`), a 2xx clears only its own account's strikes, and a probe through a lock goes to
 the locked account. A call is refused before reserve only when its pinned account, or every account
-of an open call, is out; `assign` skips accounts that are. The sweep still reads only the primary,
+of an open call, is out; `assign` skips accounts that are, and prefers one without an outage
+lock on the endpoint. The sweep still reads only the primary,
 so a further account's lock lifts at its expiry or through its own probe, and the burst-429 re-send
 stays on the same account.
 
@@ -541,6 +542,21 @@ is neither a strike nor a mark: it emits a `capacity` `unrecorded` event with th
 (`ops/capacity.md`) and rides
 `tool_called` as `capacity_signal=unrecorded`, the tripwire for a vendor whose out-of-credit answer is
 not in the table yet (how Apollo's 422 went unseen on 2026-09-01).
+
+The same breaker has an **outage** kind for an endpoint that stops answering treg's key. A tier-4
+call that ends in a 5xx other than 501 (`signatures.is_outage`), or gets no answer at all (a
+timeout, a refused, reset or cut connection: `service._no_answer`; a full connection pool is
+treg's own), strikes `outage:<endpoint_id>` on its account, through the same
+`_note_capacity_signal` after the release. The third strike within 10 min, with no 2xx between,
+locks for 10 min. The lock is not in `view.locks`, so **it refuses no call**: plain `/call/` names
+the endpoint and is relayed as usual, and its 2xx clears the lock. Only places that have something
+else to use read it (`view.outage_lock`): the router drops the child from the plan, named in
+`_treg.dropped` (`route.OUTAGE_WHY`), and so does the routed quote's `skipped`; `keyslots.assign`
+prefers an account without one. Overflow is not offered around it, since the aggregator relays the
+same vendor. Any treg-key 2xx clears the row, pending or active; an archived answer clears nothing.
+A strike within 10 min of an outage lock expiring uncleared reopens it at once for twice the last
+hold, at most 1 h, so the routed calls an expiry lets through are the probe and a long outage costs
+them one timeout window an hour. Own keys and anonymous routes neither strike nor read it.
 
 ## Burst smoothing on treg's own keys (plan step D′)
 

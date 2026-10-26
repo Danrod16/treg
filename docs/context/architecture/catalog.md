@@ -2229,7 +2229,8 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   provider file.
   `catalog_get` on it returns the contract and the ranked **plan** (the quote) —
   nothing is reserved. A child the router would not call on treg's key (paused, not
-  `platform_eligible`, no key on this deployment) ranks after the rest with a `skipped` reason.
+  `platform_eligible`, no key on this deployment, an outage lock) ranks after the rest with a
+  `skipped` reason.
 - **Ranking** — `routing/plan.py`: own keys (tier 2) first at cost 0; then
   `expected_cost_per_hit = cost_at(request) × P(billed) / P(hit)` where `cost_at` prices *this*
   request at its requested size (per-result × limit, credit-with-minimum rounded up) and `P(hit)`
@@ -2240,7 +2241,9 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   overflow route remains a candidate at the overflow route's price, so the ordinary child ladder can
   skip the known-dry direct account and use the aggregator; without an enabled route it is dropped.
   Providers with no key on the deployment are also dropped and named in `dropped` (`needs {…}` says
-  which identity variant a dropped child wanted).
+  which identity variant a dropped child wanted). So is a platform child in an outage lock on every
+  treg account (`ops/capacity.md`: timeouts or 5xx with no 2xx since), overflow route or not; an
+  own-key child never is.
 - **Execution** — `application/call/route.py`, entered from `service._execute_call` when the
   resolved catalog row is `kind: routed`. Each attempt is a **full child `execute_call`** on a
   `CallContext` whose `call_ref` is `{parent}:r{n}` — its hold id, ladder (tiers 1/2/4/overflow),

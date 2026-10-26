@@ -95,6 +95,8 @@ How a routed call works:
   `X-Treg-Route-Max-Cost` (default $1 per call). A miss can be billed, which is why a routed tool
   quotes `usd_per_call: null` rather than $0: set the header for bulk runs.
   `X-Treg-Route-Waterfall: 0` stops at the first miss.
+- A provider that keeps failing on treg's key (timeouts or server errors, no success since) is
+  skipped until it answers again, and `_treg.dropped` says so. Calling it by id still reaches it.
 - A filter the serving provider could not apply is named in `X-Treg-Ignored-Filters` and
   `_treg.ignored_filters`: filter the rows yourself, or send `X-Treg-Route-Strict-Filters: 1` to be
   refused with an unbilled 422 instead.
