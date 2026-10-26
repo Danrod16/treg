@@ -90,6 +90,7 @@ class Adapter:
     out_map: dict[str, str]                    # core field → expression over the provider body
     miss: str
     const: dict[str, Any] = field(default_factory=dict)   # fixed provider params (`body.type: work`)
+    empty: str = ""                            # the provider states the SOURCE itself had nothing: a final miss
     in_expr: dict[str, str] = field(default_factory=dict) # provider param ← expression over the request (filters)
     body_array: bool = False                   # the provider wants `[body]` (DataForSEO's task list)
     test_identity: dict[str, Any] = field(default_factory=dict)  # what the endpoint's test_request stands for, when `in` cannot read it back
@@ -149,6 +150,11 @@ class Adapter:
 
     def is_miss(self, provider_body: Any) -> bool:
         return bool(P.evaluate(self.miss, provider_body))
+
+    def is_empty(self, provider_body: Any) -> bool:
+        """The provider's own statement that the source had no result (Google matched nothing),
+        as opposed to an empty answer the provider failed to fill. Never true without `empty`."""
+        return bool(self.empty) and bool(P.evaluate(self.empty, provider_body))
 
     @property
     def records_verdict(self) -> bool:
@@ -266,6 +272,7 @@ def parse_adapters(doc: dict) -> dict[str, Adapter]:
             additional_capabilities=tuple(a.get("additional_capabilities") or ()),
             route=a.get("route", True) is not False,
             const=dict(a.get("const") or {}), out_map=dict(a.get("out") or {}), miss=str(a.get("miss") or ""),
+            empty=str(a.get("empty") or ""),
             verdict=str(a.get("verdict") or ""),
             verdicts={_verdict_key(k) or str(k): str(v) for k, v in (a.get("verdicts") or {}).items()})
     return out
@@ -410,6 +417,8 @@ def verify(adapter: Adapter, contract: Contract, endpoint: dict, example: Any) -
         return False, "no example_response to verify `out` against"
     if adapter.is_miss(example):
         return True, "example is a miss; out unverified on a hit"
+    if adapter.is_empty(example):
+        return False, "empty: the example answer is not a miss but reads as an empty source"
     core = adapter.from_upstream(example)
     missing = [k for k in contract.required_output if core.get(k) in (None, "")]
     if missing:

@@ -14,8 +14,10 @@ status as its "no result" answer (`miss: {status: 404}`), which is a MISS. A dec
 platform vendor 401/403 responses are errors because another child may work. A MISS (2xx,
 `adapter.miss`) tries the next candidate: the waterfall is ON by default (the endpoint's job is
 to find the thing), and each attempt settles at its own price. `X-Treg-Route-Waterfall: 0` stops
-at the first miss. `X-Treg-Route-Max-Cost` (default $1.00) bounds the call: a candidate is started
-only while what was already charged plus its catalog estimate fits under it.
+at the first miss, and so does a miss whose provider states the source itself had nothing (the
+adapter's `empty`). `X-Treg-Route-Max-Cost` (default $1.00) bounds the call: a candidate is started
+only while what was already charged plus its catalog estimate fits under it, and no child settles
+above what is left of it.
 
 `X-Treg-Route-Verify` asks for one more call after a hit, the contract's `check` (an email find
 checked by `treg.people.email.verify`). It is its own linked child `:v` with its own hold and
@@ -741,11 +743,20 @@ async def _run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_head
         # a 20000 envelope) says this request failed: not an answer, whatever the remains read as.
         upstream_failed = catalog_results.fails_expect(cand.endpoint["id"], raw)
         if doc is None or is_miss or empty_core or upstream_failed:
+            # The provider says the SOURCE had nothing (Google matched no page), not that it failed
+            # to read it: every other provider can only bill the same nothing, so the walk ends.
+            try:
+                source_empty = doc is not None and cand.adapter.is_empty(doc)
+            except Exception:  # noqa: BLE001 - an unreadable statement is no statement
+                source_empty = False
             tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "miss", response.status, charged,
+                                 "the source has no result" if source_empty else
                                  f"provider reported failure: {upstream_failed}" if upstream_failed else "",
                                  ignored=ignored))
-            if options.waterfall:
+            if options.waterfall and not source_empty:
                 continue
+            if best is not None:
+                break   # rows already paid for outrank a later provider's empty answer
             winner = (cand, doc if doc is not None else {}, {}, raw)
             break
         # A HIT that answers thinly is not the end of the search. `min_results` lets the caller say
