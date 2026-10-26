@@ -756,6 +756,7 @@ adapters:
     body_array: true
     out: {results: "tasks[0].result[0].items", count: "tasks[0].result[0].items_count"}
     miss: "tasks[0].result[0].items == []"
+    empty: "tasks[0].status_code == 40102"   # DataForSEO's "No Search Results": Google matched nothing
   dataforseo.x.serp-google-organic-live-advanced:
     accepts: [[q]]
     in:  {q: body.keyword}
@@ -764,6 +765,7 @@ adapters:
     body_array: true
     out: {results: "tasks[0].result[0].items", count: "tasks[0].result[0].items_count"}
     miss: "tasks[0].result[0].items == []"
+    empty: "tasks[0].status_code == 40102"   # DataForSEO's "No Search Results": Google matched nothing
   serpapi.google.serp.organic:
     accepts: [[q]]
     in:  {q: queryParams.q}
@@ -771,6 +773,7 @@ adapters:
     const: {queryParams.engine: google}
     out: {results: organic_results, count: search_information.total_results}
     miss: "organic_results == []"
+    empty: "search_information.organic_results_state == 'Fully empty'"   # Google returned no page
   serpapi.x.google-light:
     accepts: [[q]]
     in:  {q: queryParams.q}
@@ -778,6 +781,7 @@ adapters:
     const: {queryParams.engine: google_light}
     out: {results: organic_results, count: "len(organic_results)"}
     miss: "organic_results == []"
+    empty: "search_information.organic_results_state == 'Fully empty'"   # Google returned no page
   scrapecreators.x.v1-google-search:
     accepts: [[q]]
     in:  {q: queryParams.query}
@@ -2845,6 +2849,7 @@ adapters:
               queryParams.source: "choose(ai_overview, 'google', null)"}
     out: {results: results, count: "len(results)"}
     miss: "coalesce(results, []) == []"
+    empty: "empty_reason == 'google_no_results'"   # not rescue_no_results: another provider may still find rows
   anyapi.google.serp.organic:
     accepts: [[q]]
     in:  {q: body.query}
