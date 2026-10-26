@@ -204,10 +204,12 @@ task or a loop over many inputs, tell the human the expected total, then keep a 
 `X-Treg-Cost-Micro` and stop before it passes what they agreed to. `X-Treg-Route-Max-Cost` caps
 each call, not the loop.
 
-- **Read the `cost` block, not only the headline.** `per_call` is flat. `type: per_result` with
-  `unit: row` is priced per returned row, and its `~$/call` figure assumes a 20-row page (your
-  `limit` sets the real count). `unit: target`, `domain` or `keyword` is priced per thing you ask
-  about: one unit per target whatever the page size, so a body listing ten domains reserves ten.
+- **Read what a price is per.** A price reads `$0.0333+/result`: over MCP that is `price`, with
+  `billed_per` naming the unit, and `usd_per_call` is set only when the number is what one call
+  costs. Per `result` or `row`, a call costs the price times the rows it returns (your `limit`
+  sets the most); per `target`, `domain` or `keyword`, times the things you ask about, so a body
+  listing ten domains costs ten. A `+` means more can apply (a larger request, a search
+  operator); the `cost` note says what. `per_call` with no `+` is flat.
 - **What you were charged** is the response header `X-Treg-Cost-Micro` (integer micro-USD; `cost_usd`
   over MCP), never anything in the provider's body. Keep `X-Treg-Call-Id` with it: it is the id to
   quote, and `GET https://treg.to/calls/<call id>/result` returns the stored answer of a successful catalog

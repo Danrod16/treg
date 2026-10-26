@@ -1161,8 +1161,17 @@ Domain Search charges 1 SEARCH credit per 1–10 emails returned (`per: 10, unit
 is the linear slice ($0.00245/email) that reserve can scale with `limit`. A live hit does not sell
 that slice: it bills one whole credit (~$0.0245) for one email or ten (observed 2026-07-31).
 `cost.display` with `grouped` + `round_up` advertises the credit (`display_usd: 0.0245`, "started
-10 emails"); `Catalog.advertised_usd` is what `catalog_search` / `catalog_get` put on
-`usd_per_call`. Settlement still reads `usd` and the derived email-count rule — display only.
+10 emails"); `Catalog.advertised_usd` is the number `catalog_search` / `catalog_get` quote.
+Settlement still reads `usd` and the derived email-count rule: display only.
+`Catalog.price_terms` is how MCP quotes it: `price` (the same label the CLI and the web show,
+`$0.0333+/result`), `price_usd` (its number), `billed_per` (the display unit, else the row's
+`unit` for a `per_result` or `quota_rows` price that is not per call, else `call`) and
+`usd_per_call`, which is that number only when `billed_per` is `call` and the price is neither
+variable nor a range; otherwise null. A per-result number under a `usd_per_call` name was read as
+the price of a call and multiplied by calls, and the estimate came out tens of times too low.
+A row with no `cost` block but an `observed_cost` (the extended DataForSEO rows) is priced at
+that observed charge as a variable per-call floor: it is what the verification request cost, and
+DataForSEO prices most routes per task plus per keyword or item.
 `Catalog.cost_view` reads the provider-neutral `cost.display` flags: `unit` names the shown unit,
 `grouped` shows the price for `cost.per` units, `round_up` labels a started block, `variable` adds
 a plus sign for selected additions, `value` shows the price of one `unit` when that is not the reserve
