@@ -1341,9 +1341,18 @@ USD figure is the largest provider charge that still settles within the caller's
 `max_cost_exceeded` and no charge, so a failover cannot settle above the ceiling. That 400 stays a
 non-2xx uncharged relay; a routed waterfall treats it as a failed attempt and may move on. An
 explicit caller value is never rewritten. The appended pair is not part of the inbound query, so
-it does not change `params_hash` or the archive key. For every other provider the ceiling remains
-a pre-reservation guard: provider-reported settlement can still exceed the estimate the guard
-checked.
+it does not change `params_hash` or the archive key. On a direct call, for every other provider
+the ceiling remains a pre-reservation guard: provider-reported settlement can still exceed the
+estimate the guard checked.
+
+A routed child's ceiling also caps its charge, so a routed call's total never exceeds
+`X-Treg-Route-Max-Cost`. `_platform_settle` settles a synchronous routed child (one whose hold is
+deferred to its parent) at no more than `money.cost_within(max_cost_micro)`, the largest provider
+cost whose margin-inclusive charge fits the ceiling the earlier children left, even when the
+provider reports more than the estimate the reservation checked (DataForSEO bills a search
+operator at five times its rate card). treg absorbs the difference. An asynchronous child settles
+later in the worker, which does not carry the ceiling; there the reservation check is the only
+guard.
 
 ## Overflow money
 

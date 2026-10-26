@@ -206,10 +206,10 @@ each call, not the loop.
   exceed it (402 `route_max_cost`, nothing charged). Where the catalog says the provider accepts a
   ceiling parameter, treg also forwards the remaining ceiling upstream, so a provider that fails
   over to a dearer source cannot settle above it; a refusal from that parameter is a non-2xx and
-  costs nothing. For every other provider the header stays a pre-reservation guard. It applies to
-  each request on its own and does not add up across calls. Direct calls have no default; on a
-  routed call it also bounds the whole waterfall, $1 by default, and each child receives the
-  unspent remainder.
+  costs nothing. For every other provider the header stays a pre-reservation guard on a direct
+  call. It applies to each request on its own and does not add up across calls. Direct calls have
+  no default; on a routed call it caps the whole waterfall's total, $1 by default, even when a
+  provider reports more than its listed price, and each child receives the unspent remainder.
 - **Failed calls are free.** A 4xx or 5xx relayed from the provider costs nothing. Empty results mean
   whatever the provider means by them; treg relays and does not normalise. A provider that reports
   a failure inside a 2xx (a DataForSEO task status other than 20000) is flagged with

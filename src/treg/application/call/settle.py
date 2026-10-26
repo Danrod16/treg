@@ -1202,6 +1202,14 @@ async def _platform_settle(
         # hit); this stored answer costs the configured share. Applied to the RAW amount so the
         # margin rule stays the ledger's alone. Floor division, never rounding up a discount.
         actual = actual * repeat_percent // 100
+    if billable and actual is not None and mk.max_cost_micro is not None and mk.deferred is not None:
+        # A routed child settles within what is left of the route's X-Treg-Route-Max-Cost, so
+        # the waterfall's total never passes it: a provider that reports more than the estimate
+        # it was reserved at (DataForSEO bills search operators at five times its rate card)
+        # settles at the remaining ceiling, and treg absorbs the rest.
+        ceiling = ledger.cost_within(mk.max_cost_micro)
+        if actual > ceiling:
+            actual = ceiling
     call_id, mk.call_id = mk.call_id, None  # closing is once-only, even if two paths try
     charged = 0
     if mk.deferred is not None and billable and actual == 0:

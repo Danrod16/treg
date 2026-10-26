@@ -1,6 +1,8 @@
-"""Caller ceilings are enforced against reservations, not advisory route quotes."""
+"""Caller ceilings are enforced against reservations and settlements, not advisory route quotes."""
 
+import json
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 from sqlmodel import select
@@ -9,6 +11,7 @@ from treg.application.call import route as routing
 from treg.application.call import service
 from treg.config import get_settings
 from treg.domain import money
+from treg.domain.catalog import store as catalog_store
 from treg.infra.db import session_maker
 from treg.models import Hold, LedgerEntry
 
@@ -199,4 +202,43 @@ async def test_own_key_remains_unmetered_with_zero_ceiling(clients, moz_on, monk
     assert response.status_code == 200, response.text
     assert len(seen) == 1 and await _balance(clients) == before
     assert response.json()['_treg']['tier'] == 'credential'
+    await _assert_no_holds()
+
+
+def _dfs_empty_serp(cost_usd):
+    """A DataForSEO organic answer that found nothing and reports a charge above the rate card."""
+    root = Path(catalog_store.__file__).parents[2] / 'catalog' / 'examples'
+    doc = json.loads((root / 'dataforseo.google.serp.organic.json').read_text())
+    doc['cost'] = doc['tasks'][0]['cost'] = cost_usd
+    doc['tasks'][0]['result'][0].update(items=[], items_count=0)
+    return doc
+
+
+@pytest.fixture
+def dfs_on(monkeypatch, platform_on):
+    monkeypatch.setenv('TREG_PLATFORM_KEY_DATAFORSEO', 'login:password')
+    monkeypatch.setenv('TREG_PLATFORM_PROVIDERS', 'dataforseo')
+    get_settings.cache_clear()
+
+
+@pytest.mark.parametrize('margin', ['0', '0.2'])
+async def test_reported_charges_never_settle_the_route_past_its_ceiling(clients, dfs_on, monkeypatch, margin):
+    """Each DataForSEO child reserves the $0.002 floor and then reports $0.01 (a site: query bills
+    five times the floor). The ceiling caps what the caller pays, not only what is held."""
+    monkeypatch.setenv('TREG_PLATFORM_MARGIN', margin)
+    get_settings.cache_clear()
+    seen = []
+    monkeypatch.setattr(service, 'relay', _relay_by_provider(
+        {'dataforseo': [(200, _dfs_empty_serp(0.01)), (200, _dfs_empty_serp(0.01))]}, seen))
+    before = await _balance(clients)
+    response = await clients.post('/call/treg.google.serp.organic', json={'q': 'site:example.com nothing'},
+                                  headers={'X-Treg-Route-Max-Cost': '0.018'})
+    assert response.status_code == 200, response.text
+    assert [p for p, *_ in seen] == ['dataforseo', 'dataforseo']
+    tried = response.json()['_treg']['tried']
+    assert [t['outcome'] for t in tried] == ['miss', 'miss']
+    charged = before - await _balance(clients)
+    assert charged == 18_000
+    assert charged == money.with_margin(10_000) + tried[1]['charged_micro']
+    assert int(response.headers['x-treg-cost-micro']) == charged == response.json()['_treg']['charged_micro']
     await _assert_no_holds()
