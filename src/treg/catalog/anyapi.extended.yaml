@@ -43,7 +43,7 @@ endpoints:
         note: Meta Ad Library ad URL (e.g. "https://www.facebook.com/ads/library?id=1185617869915074"). Provide either id or url.
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -80,7 +80,7 @@ endpoints:
         example: '1519158199783790'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00462
     currency: USD
     unit: call
@@ -121,7 +121,7 @@ endpoints:
         note: Meta Ad Library ad URL (e.g. "https://www.facebook.com/ads/library?id=1020359190509080"). Provide either id or url.
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -217,7 +217,7 @@ endpoints:
         - INACTIVE
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -266,7 +266,7 @@ endpoints:
         example: ZmVlZGJhY2s6MTM5MzQ2MTExNTQ4MTkyN18yMDgyNjUzMjQ1ODA5Mzg2
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -353,7 +353,7 @@ endpoints:
         - INACTIVE
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -395,7 +395,7 @@ endpoints:
         note: The event's Facebook URL.
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -444,7 +444,7 @@ endpoints:
         example: https://www.facebook.com/events/explore/saint-petersburg-florida/111326725552547
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -485,7 +485,7 @@ endpoints:
         example: music festival
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -534,7 +534,7 @@ endpoints:
         example: https://www.facebook.com/nike
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.12
     currency: USD
     unit: call
@@ -642,7 +642,7 @@ endpoints:
         - price_descend
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -687,7 +687,7 @@ endpoints:
         example: https://www.facebook.com/marketplace/item/1656586118821988/
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -724,7 +724,7 @@ endpoints:
         example: Austin
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -766,7 +766,7 @@ endpoints:
         example: https://www.facebook.com/joesstonecrab
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -807,7 +807,7 @@ endpoints:
         example: https://www.facebook.com/Spurs
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -852,7 +852,7 @@ endpoints:
         example: https://www.facebook.com/reel/2166091230582141/
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -889,7 +889,7 @@ endpoints:
         example: https://www.facebook.com/reel/2166091230582141/
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -930,7 +930,7 @@ endpoints:
         example: https://www.facebook.com/nike
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -971,7 +971,7 @@ endpoints:
         example: https://www.facebook.com/brickyardoldtown
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -1012,7 +1012,7 @@ endpoints:
         example: https://www.facebook.com/nike
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -1049,7 +1049,7 @@ endpoints:
         example: nike
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -1097,7 +1097,7 @@ endpoints:
         example: nike
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.1221
     currency: USD
     unit: call
@@ -1154,7 +1154,7 @@ endpoints:
         note: Only return posts published on or after this date, format YYYY-MM-DD (e.g. 2024-01-01).
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.06606
     currency: USD
     unit: call
@@ -1192,7 +1192,7 @@ endpoints:
         example: What is AnyAPI at getanyapi.com, and what does it offer?
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0007
     currency: USD
     unit: call
@@ -1261,7 +1261,7 @@ endpoints:
         note: 'Restrict results to a recent time window: 1h, 1d, 7d, 1y, or all. Default all (no time restriction).'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00198
     currency: USD
     unit: call
@@ -1301,7 +1301,7 @@ endpoints:
         example: https://i.imgur.com/HBrB8p0.png
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00297
     currency: USD
     unit: call
@@ -1338,7 +1338,7 @@ endpoints:
         example: wireless charging
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00099
     currency: USD
     unit: call
@@ -1375,7 +1375,7 @@ endpoints:
         example: attention is all you need
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00099
     currency: USD
     unit: call
@@ -1433,7 +1433,7 @@ endpoints:
         note: 'Restrict results to a recent time window: 1h, 1d, 7d, 1y, or all. Default all (no time restriction).'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0018
     currency: USD
     unit: call
@@ -1493,7 +1493,7 @@ endpoints:
         note: 'Restrict results to a recent time window: 1h, 1d, 7d, 1y, or all. Default all (no time restriction).'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00099
     currency: USD
     unit: call
@@ -1567,7 +1567,7 @@ endpoints:
         - TOP_RATED
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0638
     currency: USD
     unit: call
@@ -1647,7 +1647,7 @@ endpoints:
         example: withWebsite
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0946
     currency: USD
     unit: call
@@ -1692,7 +1692,7 @@ endpoints:
         note: Pagination cursor returned by a previous response.
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0011
     currency: USD
     unit: call
@@ -1729,7 +1729,7 @@ endpoints:
         example: '314216'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -1775,7 +1775,7 @@ endpoints:
         example: https://www.instagram.com/p/C8rKmYvsrck/
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0011
     currency: USD
     unit: call
@@ -1813,7 +1813,7 @@ endpoints:
         example: nasa
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -1857,7 +1857,7 @@ endpoints:
         example: 5
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00297
     currency: USD
     unit: call
@@ -1899,7 +1899,7 @@ endpoints:
         example: skincare
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0024
     currency: USD
     unit: call
@@ -1940,7 +1940,7 @@ endpoints:
         example: skincare
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0015
     currency: USD
     unit: call
@@ -1977,7 +1977,7 @@ endpoints:
         example: '18201653992314974'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -2027,7 +2027,7 @@ endpoints:
         example: recent
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -2062,7 +2062,7 @@ endpoints:
         example: https://www.instagram.com/reel/DHsD6HGqJhp/
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -2099,7 +2099,7 @@ endpoints:
         example: https://www.instagram.com/reel/DWzrfE2kaY8/
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0024
     currency: USD
     unit: call
@@ -2136,7 +2136,7 @@ endpoints:
         example: nasa
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -2173,7 +2173,7 @@ endpoints:
         example: eminenceorganics
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00721
     currency: USD
     unit: call
@@ -2216,7 +2216,7 @@ endpoints:
         example: false
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0308
     currency: USD
     unit: call
@@ -2269,7 +2269,7 @@ endpoints:
         - place
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0036
     currency: USD
     unit: call
@@ -2306,7 +2306,7 @@ endpoints:
         example: Eiffel Tower
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0011
     currency: USD
     unit: call
@@ -2347,7 +2347,7 @@ endpoints:
         example: coffee roaster
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -2384,7 +2384,7 @@ endpoints:
         example: nasa
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00175
     currency: USD
     unit: call
@@ -2421,7 +2421,7 @@ endpoints:
         example: natgeo
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0022
     currency: USD
     unit: call
@@ -2458,7 +2458,7 @@ endpoints:
         example: natgeo
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0015
     currency: USD
     unit: call
@@ -2499,7 +2499,7 @@ endpoints:
         example: nasa
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0024
     currency: USD
     unit: call
@@ -2532,7 +2532,7 @@ endpoints:
     body: {}
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -2566,7 +2566,7 @@ endpoints:
         note: Instagram numeric user id (optional, faster than handle).
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -2607,7 +2607,7 @@ endpoints:
         example: '787132'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0011
     currency: USD
     unit: call
@@ -2644,7 +2644,7 @@ endpoints:
         example: https://www.linkedin.com/ad-library/detail/1487405616
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -2688,7 +2688,7 @@ endpoints:
         example: https://www.linkedin.com/company/stripe
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.01656
     currency: USD
     unit: call
@@ -2750,7 +2750,7 @@ endpoints:
         note: Search start date in YYYY-MM-DD format.
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -2787,7 +2787,7 @@ endpoints:
         example: https://www.linkedin.com/pulse/artificial-intelligence-primer-stephen-dover
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00569
     currency: USD
     unit: call
@@ -2824,7 +2824,7 @@ endpoints:
         example: https://www.linkedin.com/company/stripe
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00253
     currency: USD
     unit: call
@@ -2890,7 +2890,7 @@ endpoints:
         example: https://www.linkedin.com/company/stripe
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.02046
     currency: USD
     unit: call
@@ -2933,7 +2933,7 @@ endpoints:
         example: https://www.linkedin.com/company/stripe
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -2970,7 +2970,7 @@ endpoints:
         example: https://www.linkedin.com/company/stripe
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -3007,7 +3007,7 @@ endpoints:
         example: https://www.linkedin.com/posts/stripe_last-week-agent-traffic-surpassed-human-activity-7470882737390940160-2Nxs
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -3064,7 +3064,7 @@ endpoints:
         example: https://www.linkedin.com/posts/stripe_philip-kl%C3%B6ckner-in-conversation-with-conor-activity-7477791740645564416-tIbZ
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00685
     currency: USD
     unit: call
@@ -3109,7 +3109,7 @@ endpoints:
         example: https://www.linkedin.com/posts/satyanadella_today-were-bringing-skills-to-copilot-for-activity-7475945433668694017--kvG
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0084
     currency: USD
     unit: call
@@ -3147,7 +3147,7 @@ endpoints:
         example: https://www.linkedin.com/posts/artificial-analysis_gemini-35-flash-is-a-step-forward-for-google-activity-7465082408409870337-4Pm-
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -3233,7 +3233,7 @@ endpoints:
         example: https://www.linkedin.com/in/williamhgates/
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.01951
     currency: USD
     unit: call
@@ -3283,7 +3283,7 @@ endpoints:
         example: https://www.linkedin.com/in/williamhgates/
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0274
     currency: USD
     unit: call
@@ -3333,7 +3333,7 @@ endpoints:
         example: fintech
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.041
     currency: USD
     unit: call
@@ -3484,7 +3484,7 @@ endpoints:
         note: 'Filter by total years of experience. Codes: 1=Less than 1 year, 2=1 to 2 years, 3=3 to 5 years, 4=6 to 10 years, 5=More than 10 years.'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.18
     currency: USD
     unit: call
@@ -3636,7 +3636,7 @@ endpoints:
         note: 'Filter by total years of experience. Codes: 1=Less than 1 year, 2=1 to 2 years, 3=3 to 5 years, 4=6 to 10 years, 5=More than 10 years.'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.305
     currency: USD
     unit: call
@@ -3679,7 +3679,7 @@ endpoints:
         example: recruiter
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.036
     currency: USD
     unit: call
@@ -3716,7 +3716,7 @@ endpoints:
         example: https://www.reddit.com/r/IAmA/comments/z1c9z/i_am_barack_obama_president_of_the_united_states/
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00215
     currency: USD
     unit: call
@@ -3757,7 +3757,7 @@ endpoints:
         example: https://www.reddit.com/r/IAmA/comments/z1c9z/i_am_barack_obama_president_of_the_united_states/
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -3798,7 +3798,7 @@ endpoints:
         example: https://www.reddit.com/r/youseeingthisshit/comments/1oiu9xm/
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -3835,7 +3835,7 @@ endpoints:
         example: spez
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -3897,7 +3897,7 @@ endpoints:
         - all
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -3934,7 +3934,7 @@ endpoints:
         example: programming
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -4007,7 +4007,7 @@ endpoints:
         - hour
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -4062,7 +4062,7 @@ endpoints:
         note: 'Optional time filter: all, year, month, week, day, hour.'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -4107,7 +4107,7 @@ endpoints:
         example: 25
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0002
     currency: USD
     unit: call
@@ -4164,7 +4164,7 @@ endpoints:
         example: spez
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -4214,7 +4214,7 @@ endpoints:
         example: spez
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -4251,7 +4251,7 @@ endpoints:
         example: '7648493525660270600'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -4303,7 +4303,7 @@ endpoints:
         example: GB
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -4378,7 +4378,7 @@ endpoints:
         default: last_shown_date,desc
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0005
     currency: USD
     unit: call
@@ -4418,7 +4418,7 @@ endpoints:
         example: shakira
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.018
     currency: USD
     unit: call
@@ -4464,7 +4464,7 @@ endpoints:
         example: https://www.tiktok.com/@stoolpresidente/video/7623818255903329566
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0009
     currency: USD
     unit: call
@@ -4506,7 +4506,7 @@ endpoints:
         example: stoolpresidente
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -4547,7 +4547,7 @@ endpoints:
         example: stoolpresidente
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -4595,7 +4595,7 @@ endpoints:
         example: 3
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0036
     currency: USD
     unit: call
@@ -4633,7 +4633,7 @@ endpoints:
         example: thejustalex
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -4670,7 +4670,7 @@ endpoints:
         example: https://www.tiktok.com/@foodbyfranchi/video/7479916555602513174
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -4707,7 +4707,7 @@ endpoints:
         example: gordonramsayofficial
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00116
     currency: USD
     unit: call
@@ -4744,7 +4744,7 @@ endpoints:
         example: stoolpresidente
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -4785,7 +4785,7 @@ endpoints:
         example: recipe
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -4822,7 +4822,7 @@ endpoints:
         example: '7439295283975702544'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0009
     currency: USD
     unit: call
@@ -4863,7 +4863,7 @@ endpoints:
         note: Pagination cursor for retrieving the next page of results.
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0009
     currency: USD
     unit: call
@@ -4980,7 +4980,7 @@ endpoints:
         default: US
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -5021,7 +5021,7 @@ endpoints:
         note: Set to true to return a simplified response.
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -5126,7 +5126,7 @@ endpoints:
         example: US
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -5169,7 +5169,7 @@ endpoints:
         example: https://www.tiktok.com/@mrbeast/video/7654638524729216287?_r=1&u_code=elgjf3ff8cajhk&preview_pb=0&sharer_language=en&_d=elh6737j6kjl71&share_item_id=7654638524729216287&source=h5_m
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -5206,7 +5206,7 @@ endpoints:
         example: https://www.tiktok.com/@mrbeast/video/7654638524729216287
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -5243,7 +5243,7 @@ endpoints:
         example: https://www.tiktok.com/@thatdudecancook/video/7649086431641521421
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0176
     currency: USD
     unit: call
@@ -5284,7 +5284,7 @@ endpoints:
         example: US
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -5326,7 +5326,7 @@ endpoints:
         default: us
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0055
     currency: USD
     unit: call
@@ -5367,7 +5367,7 @@ endpoints:
         example: https://www.tiktok.com/shop/pdp/goli-ashwagandha-gummies-with-vitamin-d-ksm-66-vegan-non-gmo/1729587769570529799
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -5414,7 +5414,7 @@ endpoints:
         example: https://www.tiktok.com/shop/pdp/cat-nail-clipper-by-potaroma-adjustable-sizes-built-in-file-safe-for-kittens-cats/1731578642912612516
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00095
     currency: USD
     unit: call
@@ -5479,7 +5479,7 @@ endpoints:
         example: phone case
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -5528,7 +5528,7 @@ endpoints:
         example: ashwagandha gummies
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -5582,7 +5582,7 @@ endpoints:
         example: https://www.tiktok.com/shop/store/goli-nutrition/7495794203056835079
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -5627,7 +5627,7 @@ endpoints:
         note: Geographical region for proxy placement (defaults to US).
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -5672,7 +5672,7 @@ endpoints:
         example: https://example.com
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0045
     currency: USD
     unit: call
@@ -5733,7 +5733,7 @@ endpoints:
         example: https://www.iana.org
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.001
     currency: USD
     unit: call
@@ -5810,7 +5810,7 @@ endpoints:
         max: 15000
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0009
     currency: USD
     unit: call
@@ -5855,7 +5855,7 @@ endpoints:
         default: 1280
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00174
     currency: USD
     unit: call
@@ -5892,7 +5892,7 @@ endpoints:
         example: https://x.com/Decentralisedco/status/1905545699552375179
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00075
     currency: USD
     unit: call
@@ -5929,7 +5929,7 @@ endpoints:
         example: https://x.com/i/communities/1926186499399139650
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0001
     currency: USD
     unit: call
@@ -5966,7 +5966,7 @@ endpoints:
         example: https://x.com/i/communities/1926186499399139650
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00045
     currency: USD
     unit: call
@@ -6015,7 +6015,7 @@ endpoints:
         example: nasa
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00075
     currency: USD
     unit: call
@@ -6065,7 +6065,7 @@ endpoints:
         example: nasa
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00075
     currency: USD
     unit: call
@@ -6107,7 +6107,7 @@ endpoints:
         example: artificial intelligence
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0011
     currency: USD
     unit: call
@@ -6148,7 +6148,7 @@ endpoints:
         example: ai agents
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00075
     currency: USD
     unit: call
@@ -6185,7 +6185,7 @@ endpoints:
         example: https://x.com/SpaceX/status/1732824684683784516
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00375
     currency: USD
     unit: call
@@ -6230,7 +6230,7 @@ endpoints:
         example: US
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00075
     currency: USD
     unit: call
@@ -6268,7 +6268,7 @@ endpoints:
         example: https://x.com/SpaceX/status/1732824684683784516
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00075
     currency: USD
     unit: call
@@ -6305,7 +6305,7 @@ endpoints:
         example: https://x.com/TheoVon/status/1916982720317821050
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -6346,7 +6346,7 @@ endpoints:
         example: '@mkbhd'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -6391,7 +6391,7 @@ endpoints:
         example: '@MrBeast'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -6432,7 +6432,7 @@ endpoints:
         example: '@mkbhd'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0718
     currency: USD
     unit: call
@@ -6477,7 +6477,7 @@ endpoints:
         example: '@IShowSpeed'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -6522,7 +6522,7 @@ endpoints:
         example: '@veritasium'
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -6576,7 +6576,7 @@ endpoints:
         example: latest
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -6629,7 +6629,7 @@ endpoints:
         - popular
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -6666,7 +6666,7 @@ endpoints:
         example: Eg0SC19fZm1EajBaSjFRGAYygwEaUBIaVWd3aXRjRk9fdmtpM0x4LUNfZDRBYUFCQWciAggAKhhVQ1g2T1EzRGtjc2JZTkU2SDh1UVF1VkEyC19fZm1EajBaSjFRQABICoIBAggBQi9jb21tZW50LXJlcGxpZXMtaXRlbS1VZ3dpdGNGT192a2kzTHgtQ19kNEFhQUJBZw==
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -6703,7 +6703,7 @@ endpoints:
         example: https://www.youtube.com/post/Ugkx1LonSRBBUqASv-J8j9_FesxwlMAhT3_e
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -6740,7 +6740,7 @@ endpoints:
         example: PLMC9KNkIncKtPzgY-5rmhvj7fax8fdxoj
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -6798,7 +6798,7 @@ endpoints:
         - this_year
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -6845,7 +6845,7 @@ endpoints:
         - all
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -6903,7 +6903,7 @@ endpoints:
         - this_year
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -6936,7 +6936,7 @@ endpoints:
     body: {}
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -6970,7 +6970,7 @@ endpoints:
         example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -7015,7 +7015,7 @@ endpoints:
         example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -7056,7 +7056,7 @@ endpoints:
         example: https://www.youtube.com/watch?v=AVO0ifle-OU
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.0012
     currency: USD
     unit: call
@@ -7097,7 +7097,7 @@ endpoints:
         example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.002
     currency: USD
     unit: call
@@ -7147,7 +7147,7 @@ endpoints:
         example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
     bodyType: json
   cost:
-    type: per_success
+    type: per_call
     value: 0.00308
     currency: USD
     unit: call
