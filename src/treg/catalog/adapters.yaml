@@ -2703,14 +2703,8 @@ adapters:
           followers: element.followerCount, connections: element.connectionsCount, about: element.about,
           linkedin_url: element.linkedinUrl}
     miss: "element.id == null"
-  harvestapi.linkedin.user.profile.email:
-    accepts: [[linkedin_handle]]
-    in: {linkedin_handle: queryParams.publicIdentifier}
-    const: {queryParams.findEmail: "true"}
-    out: {email: "element.emails[0].email", confidence: "element.emails[0].qualityScore / 100",
-          first_name: element.firstName, last_name: element.lastName,
-          verified: "element.emails[0].status == 'valid'"}
-    miss: "element.emails[0].email == null"
+  # Left out on purpose: linkedin.user.profile.email bills a profile match that has no email,
+  # a paid miss in people.email.find, a waterfall of free misses.
   harvestapi.linkedin.company.profile:
     additional_capabilities: [companies.enrich]
     accepts: [[linkedin_handle]]
