@@ -10031,6 +10031,22 @@ endpoints:
   added: '2026-07-28'
   example_response: examples/dataforseo.x.serp-google-organic-live-advanced.json
   observed_cost: 0.004
+  cost:
+    type: per_call
+    value: 0.002
+    currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://dataforseo.com/pricing
+    checked: '2026-10-26'
+    confidence: documented
+    display: {unit: call, variable: true}
+    note: '$0.002 is the floor: one SERP page of up to 10 results. The charge is $0.002 per started
+      10 results of `depth`, advanced search operators (site:, inurl: and the like) multiply it by 5,
+      and calculate_rectangles, load_async_ai_overview and people_also_ask_click_depth add to it. A task
+      answering 40101 (search engine error) or 40102 (no results) is billed like any other. The response
+      `cost` is the exact charge and settles the call'
 - id: dataforseo.x.serp-google-search-by-image-task-get-advanced
   added: '2026-10-15'
   tier: extended
