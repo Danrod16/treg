@@ -73,6 +73,17 @@ endpoints:
   verified: '2026-07-28'
   added: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-ai-keyword-data-keywords-search-volume-live.json
+  cost:
+    type: per_call
+    value: 0.01
+    currency: USD
+    per: 1
+    unit: call
+    display: {unit: call, variable: true}
+    source: observed
+    checked: '2026-10-26'
+    confidence: verified
+    note: '$0.01 per task plus $0.0001 per keyword in `keywords` (1,000 keywords = $0.11). Fitted to DataForSEO''s reported charges on served calls; the reported `cost` settles each call'
   observed_cost: 0.0102
   capability: ai-search.keywords.volume
 - id: dataforseo.x.ai-optimization-llm-mentions-historical-live
@@ -5659,6 +5670,18 @@ endpoints:
   verified: '2026-07-28'
   added: '2026-07-28'
   example_response: examples/dataforseo.x.dataforseo-labs-google-bulk-keyword-difficulty-live.json
+  cost:
+    type: per_call
+    value: 0.012
+    currency: USD
+    per: 1
+    unit: call
+    display: {unit: call, variable: true}
+    source: docs
+    source_url: https://dataforseo.com/pricing/dataforseo-labs/dataforseo-google-api
+    checked: '2026-10-26'
+    confidence: documented
+    note: '$0.012 per task plus $0.00012 per keyword in `keywords` (616 keywords = $0.0859), DataForSEO Labs'' default rate; the reported `cost` settles each call'
   observed_cost: 0.01236
 - id: dataforseo.x.dataforseo-labs-google-bulk-traffic-estimation-live
   tier: extended
@@ -6463,6 +6486,18 @@ endpoints:
   verified: '2026-07-28'
   added: '2026-07-28'
   example_response: examples/dataforseo.x.dataforseo-labs-google-historical-rank-overview-live.json
+  cost:
+    type: per_call
+    value: 0.12
+    currency: USD
+    per: 1
+    unit: call
+    display: {unit: call, variable: true}
+    source: docs
+    source_url: https://dataforseo.com/pricing/dataforseo-labs/dataforseo-google-api
+    checked: '2026-10-26'
+    confidence: documented
+    note: '$0.12 per task plus $0.0012 per month of history returned (25 months = $0.15); the reported `cost` settles each call'
   observed_cost: 0.1236
 - id: dataforseo.x.dataforseo-labs-google-historical-serps-live
   tier: extended
@@ -7258,6 +7293,18 @@ endpoints:
   verified: '2026-07-28'
   added: '2026-07-28'
   example_response: examples/dataforseo.x.dataforseo-labs-google-relevant-pages-live.json
+  cost:
+    type: per_call
+    value: 0.012
+    currency: USD
+    per: 1
+    unit: call
+    display: {unit: call, variable: true}
+    source: docs
+    source_url: https://dataforseo.com/pricing/dataforseo-labs/dataforseo-google-api
+    checked: '2026-10-26'
+    confidence: documented
+    note: '$0.012 per task plus $0.00012 per page returned (`limit` 100 = up to $0.024), DataForSEO Labs'' default rate; the reported `cost` settles each call'
   observed_cost: 0.01236
 - id: dataforseo.x.dataforseo-labs-google-search-intent-live
   tier: extended
@@ -14150,6 +14197,17 @@ endpoints:
   verified: '2026-07-28'
   added: '2026-07-28'
   example_response: examples/dataforseo.x.keywords-data-clickstream-data-bulk-search-volume-live.json
+  cost:
+    type: per_call
+    value: 0.012
+    currency: USD
+    per: 1
+    unit: call
+    display: {unit: call, variable: true}
+    source: observed
+    checked: '2026-10-26'
+    confidence: verified
+    note: '$0.012 per task plus $0.00012 per keyword in `keywords` (1,000 keywords = $0.132). Fitted to DataForSEO''s reported charges on served calls; the reported `cost` settles each call'
   observed_cost: 0.01236
 - id: dataforseo.x.keywords-data-clickstream-data-dataforseo-search-volume-live
   tier: extended
