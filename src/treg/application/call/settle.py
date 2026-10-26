@@ -570,6 +570,10 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes, headers=None) -> int 
             return None
         return octen.observed_micro(
             mk.endpoint_id, rates, mk.request_data, doc, mk.estimate_micro)
+    if provider == "enrichlayer" and mk.cost_type == "per_success":
+        from . import enrichlayer
+        if enrichlayer.free_miss(mk.endpoint_id, doc):
+            return 0
     if provider == "enrichlayer" and mk.settlement_basis.get("enrichlayer_rule"):
         from . import enrichlayer
         return enrichlayer.observed_micro(

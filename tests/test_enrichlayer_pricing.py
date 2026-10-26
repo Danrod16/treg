@@ -1,7 +1,13 @@
 """Request bounds and response evidence for Enrichlayer's shared-key result prices."""
 
+import json
+
+import httpx
+
+from treg import api as A
 from treg.application.call import enrichlayer
 from treg.application.call.resolve import QueryValues, _marketplace_pricing
+from treg.config import get_settings
 from treg.domain.catalog import store as catalog_store
 
 
@@ -62,3 +68,45 @@ def test_public_price_preview_accepts_routed_query_dict():
     assert _marketplace_pricing(ep["provider"], ep["id"], cost, query, b"{}") == expected
     assert _marketplace_pricing(ep["provider"], ep["id"], cost,
                                 QueryValues(tuple(query.items())), b"{}") == expected
+
+
+async def _balance(clients) -> int:
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    return (await clients.get(f"/orgs/{org_id}/balance")).json()["balance_micro"]
+
+
+async def test_reverse_phone_without_a_profile_is_free_and_a_found_profile_pays(clients, monkeypatch):
+    monkeypatch.setenv("TREG_PLATFORM_KEY_ENRICHLAYER", "PLATFORM-ENRICHLAYER")
+    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "enrichlayer")
+    get_settings.cache_clear()
+    answer = {"linkedin_profile_url": None, "twitter_profile_url": None, "facebook_profile_url": None}
+
+    class _Body(httpx.AsyncByteStream):
+        def __init__(self, doc):
+            self.body = json.dumps(doc).encode()
+
+        async def __aiter__(self):
+            yield self.body
+
+    def serve(request):
+        assert request.url.path == "/api/v2/resolve/phone"
+        return httpx.Response(200, headers={"content-type": "application/json"}, stream=_Body(answer))
+
+    try:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(serve)) as upstream:
+            monkeypatch.setattr(A.app.state, "http", upstream)
+            before = await _balance(clients)
+            miss = await clients.get("/call/enrichlayer.contacts.reverse-phone",
+                                     params={"phone_number": "+15550100000"})
+            assert miss.status_code == 200, miss.text
+            assert miss.headers["x-treg-cost-micro"] == "0"
+            assert await _balance(clients) == before
+
+            answer["twitter_profile_url"] = "https://x.example/someone"
+            hit = await clients.get("/call/enrichlayer.contacts.reverse-phone",
+                                    params={"phone_number": "+15550100001"})
+            assert hit.status_code == 200, hit.text
+            assert hit.headers["x-treg-cost-micro"] == "300000"
+            assert before - await _balance(clients) == 300_000
+    finally:
+        get_settings.cache_clear()
