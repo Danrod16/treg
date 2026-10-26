@@ -121,12 +121,12 @@ endpoints:
       value: 1
       currency: credit
       per: 1
-      unit: keyword
+      unit: row
       source: docs
       source_url: https://serpstat.com/pay/
       checked: '2026-07-28'
       confidence: documented
-      note: 1 API credit per returned keyword — `size` (default 100, max 1,000) is the cost dial, and an empty result still bills the 1-credit minimum.
+      note: 'one API credit per returned keyword row, metered from `result.data` - `size` (default 100, max 1,000) is the cost dial, and an empty result still bills the 1-credit minimum. Confirmed live 2026-10-26: a 7-row page drew 7 credits from the account''s remaining lines.'
     docs_url: https://api-docs.serpstat.com/docs/serpstat-public-api/
 
   - id: serpstat.google.domain.competitors
@@ -228,7 +228,7 @@ endpoints:
       value: 1
       currency: credit
       per: 1
-      unit: keyword
+      unit: row
       source: docs
       source_url: https://serpstat.com/pay/
       checked: '2026-07-28'
@@ -378,7 +378,7 @@ endpoints:
       value: 1
       currency: credit
       per: 1
-      unit: domain
+      unit: row
       source: docs
       source_url: https://serpstat.com/pay/
       checked: '2026-07-28'
