@@ -12,6 +12,8 @@ from .contracts import Adapter, Contract, adapter_accepts
 
 MAX_ERROR_FALLBACKS = 2
 MIN_HIT_SAMPLES = 50
+ENTITY_UNITS = frozenset({"keyword", "target", "domain"})   # a price per input entity, as the reserve counts it
+_ENTITY_KEYS = frozenset({"keywords", "targets", "domains", "urls"})
 
 
 def _used_keys(adapter: Adapter) -> set[str]:
@@ -42,6 +44,13 @@ def ignored_filters(adapter: Adapter, contract: Contract, identity: dict[str, An
                  and (k not in used or _unmappable(adapter, k, identity)))
 
 
+def unapplied_filters(adapter: Adapter, contract: Contract) -> tuple[str, ...]:
+    """The contract's filters this adapter never sends, whatever their value: a caller who sends
+    one ranks this provider after the ones that apply it (`ignored_filters`)."""
+    used = _used_keys(adapter)
+    return tuple(k for k in (contract.filters or ()) if k != "limit" and k not in used)
+
+
 def _unmappable(adapter: Adapter, key: str, identity: dict[str, Any]) -> bool:
     """True when `key` reaches the provider only through `f(key)` / `f(g(key))` expressions and
     every one of them yields nothing for this value."""
@@ -68,8 +77,9 @@ def unscoped(adapter: Adapter, contract: Contract, identity: dict[str, Any]) -> 
 
 def cost_at(cost_view: dict | None, request: dict | None = None, adapter: Adapter | None = None) -> int | None:
     """Micro-USD this request will cost at its requested size (plan §3, bench 08-27): per-result
-    prices × the requested `limit` (default 1 for a lookup); flat per-call/per-success as listed;
-    a credit-with-minimum (`per: N`) is one whole unit. None when unpriced."""
+    prices × the requested `limit` (default 1 for a lookup), or × the entities the request names
+    (`keywords`) when the price is per input entity; flat per-call/per-success as listed; a
+    credit-with-minimum (`per: N`) is one whole unit. None when unpriced."""
     if not cost_view or cost_view.get("usd") is None:
         return None
     usd = float(cost_view["usd"])
@@ -80,6 +90,10 @@ def cost_at(cost_view: dict | None, request: dict | None = None, adapter: Adapte
         return int(round(usd * units * 1_000_000))
     t = cost_view.get("type")
     per = cost_view.get("per") or 1
+    if t in ("per_result", "quota_rows") and cost_view.get("unit") in ENTITY_UNITS:
+        # Priced per thing asked about (SE Ranking bills each keyword in the list), not per row.
+        n = max([len(v) for k, v in (request or {}).items() if k in _ENTITY_KEYS and isinstance(v, list)] or [1])
+        return int(round(usd * max(1, n) * 1_000_000))
     if t in ("per_result", "quota_rows"):
         n = 1
         for k in ("limit", "count", "size", "per_page", "num"):

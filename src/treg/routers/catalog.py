@@ -230,11 +230,19 @@ def _quote_skip(ep: dict, cat) -> str | None:
     return None
 
 
-def _plan_row(c) -> dict:
+def _plan_row(c, contract=None) -> dict:
     """One quote line, token-frugal: what an agent needs to pick or set a ceiling. Measured rates
-    ride only when they exist; the unmeasured case says nothing rather than four nulls."""
+    ride only when they exist; the unmeasured case says nothing rather than four nulls. `per`
+    names what `usd` buys when it is not the whole call (one keyword of a list), and `ignores`
+    the filters this provider never applies: sending one ranks it after the providers that do."""
+    from ..domain.catalog.routing.plan import ENTITY_UNITS, unapplied_filters
     row = {"endpoint_id": c.endpoint["id"], "accepts": [list(v) for v in c.adapter.accepts],
            "usd": (c.price_micro / 1_000_000) if c.price_micro is not None else None}
+    unit = (c.endpoint.get("cost") or {}).get("unit")
+    if (c.endpoint.get("cost") or {}).get("type") in ("per_result", "quota_rows") and unit in ENTITY_UNITS:
+        row["per"] = unit
+    if contract is not None and (ignores := unapplied_filters(c.adapter, contract)):
+        row["ignores"] = list(ignores)
     if c.hit_rate is not None:
         row["hit_rate"] = c.hit_rate
         row["usd_per_hit"] = c.expected_cost_per_hit / 1_000_000
@@ -688,8 +696,8 @@ async def catalog_endpoint(
                          "miss": contract.miss, "derive": contract.derive} if contract else None,
             # A child the router would not call on treg's key (`route.py` drops it the same way)
             # stays in the plan for its `accepts`, ranked after the rest and saying why.
-            "plan": [_plan_row(c) for c in rank([c for c in cands if not _quote_skip(c.endpoint, cat)])]
-                    + [_plan_row(c) | {"skipped": _quote_skip(c.endpoint, cat)}
+            "plan": [_plan_row(c, contract) for c in rank([c for c in cands if not _quote_skip(c.endpoint, cat)])]
+                    + [_plan_row(c, contract) | {"skipped": _quote_skip(c.endpoint, cat)}
                        for c in rank([c for c in cands if _quote_skip(c.endpoint, cat)])],
             # The same job from providers whose adapter is not (yet) verified: not chosen by the
             # router, still callable by id — the search page groups them under this row, so the
