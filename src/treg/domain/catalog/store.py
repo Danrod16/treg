@@ -22,6 +22,7 @@ import shlex
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
 
 import yaml
@@ -254,6 +255,28 @@ class Catalog:
         usd = cost.get("usd")
         return usd if isinstance(usd, (int, float)) and not isinstance(usd, bool) else None
 
+    def price_terms(self, cost: dict | None) -> dict:
+        """The quoted price as an agent must read it: `price` ("$0.0333+/result"), the number in
+        it (`price_usd`), what one of it buys (`billed_per`), and `usd_per_call` only when that
+        number IS what a call costs. A per-row, per-keyword or per-result price, or a per-call
+        floor marked variable, quotes `usd_per_call: null`: a customer multiplied a $0.0333
+        per-result price by calls and was billed fifty times the estimate."""
+        usd = self.advertised_usd(cost)
+        if usd is None or not isinstance(cost, dict):
+            return {"price": None, "price_usd": None, "billed_per": None, "usd_per_call": None}
+        if not usd:
+            return {"price": "free", "price_usd": usd, "billed_per": "call", "usd_per_call": usd}
+        unit = cost.get("display_unit")
+        if not unit:
+            raw_unit = str(cost.get("unit") or "call")
+            per_unit = cost.get("type") in ("per_result", "quota_rows") and raw_unit != "call"
+            unit = raw_unit.replace("_", " ") if per_unit else "call"
+        variable = bool(cost.get("display_suffix")) or (
+            isinstance(cost.get("usd_min"), (int, float)) and cost["usd_min"] < usd)
+        label = (cost.get("display_prefix") or "") + _usd_text(usd) + ("+" if variable else "") + "/" + unit
+        return {"price": label, "price_usd": usd, "billed_per": unit,
+                "usd_per_call": usd if unit == "call" and not variable else None}
+
     def platform_eligible(self, endpoint: dict) -> bool:
         """May treg serve this endpoint with a PLATFORM key, billed to the caller's balance?
 
@@ -293,6 +316,14 @@ class Catalog:
 
 
 _CACHE: Catalog | None = None
+
+
+def _usd_text(usd: float) -> str:
+    """Three significant digits, never scientific notation: a per-row price of $0.00012 reads as
+    such, not as 1.2e-04."""
+    if not usd:
+        return "free"
+    return "$" + format(Decimal(f"{usd:.3g}"), "f")
 
 def capability_key(platform: str, capability: str) -> str:
     """A capability's URL segment on a platform: its id without the platform's prefix (`enrich` for
@@ -667,8 +698,13 @@ def _effective_cost(raw: dict):
     if oc == 0:
         return {"type": "free", "value": 0, "currency": "USD", "per": 1, "unit": "call", **seen,
                 "note": "no charge observed at verification"}
+    # The figure is what ONE request (the verification's test_request) cost. DataForSEO prices
+    # most routes per task plus per keyword or item, so it is a floor, never a flat price.
     return {"type": "per_call", "value": oc, "currency": "USD", "per": 1, "unit": "call", **seen,
-            "note": "price observed at live verification (provider-reported charge)"}
+            "display": {"unit": "call", "variable": True},
+            "note": "the charge the provider reported for the verification request; a request with "
+                    "more keywords, items or depth costs more, and the charge the provider reports "
+                    "settles the call"}
 
 
 _IGNORE_PATH = re.compile(r"(?:[A-Za-z0-9_][A-Za-z0-9_-]*|\[\*\])(?:\[\*\])*(?:\.[A-Za-z0-9_][A-Za-z0-9_-]*(?:\[\*\])*)*")
