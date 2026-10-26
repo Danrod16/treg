@@ -960,6 +960,7 @@ Provider-specific calculation stays outside the faithful relay.
 | SpyFu | Rows in `results[]` at the per-row price, capped at the hold; an empty list is free and any other shape settles at the estimate |
 | TheCompaniesAPI companies search | `simplified=true` is free on endpoints that declare it in `input.queryParams`; otherwise one credit per company in `companies[]`, capped at the requested `size` |
 | Findymail employee search | One finder credit per contact in the returned list (`_rows_billed_micro`); an empty list is a free miss where the estimate used to bill the hold |
+| Enrichlayer reverse phone lookup | An answer whose LinkedIn, Twitter and Facebook profile URLs are all present and null is a free miss (`enrichlayer.free_miss`), as Enrichlayer documents; any profile URL bills the 3-credit estimate. Its lookups that bill a no-match are catalogued `per_call` instead |
 | You.com Contents | Reserve for each requested URL, then count objects in the returned bare array at the frozen per-page price, capped at the hold. An unreadable response keeps the estimate. Search modes that may trigger live page fetches stay BYOK because the response does not identify the billed pages |
 
 Bright Data snapshot downloads are billable per result, including repeat downloads. Gzip or a

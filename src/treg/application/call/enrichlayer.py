@@ -76,6 +76,16 @@ def estimate_micro(endpoint_id: str, cost: dict, query: Mapping[str, str], credi
     return page * unit, unit
 
 
+_REVERSE_PHONE_PROFILES = ("linkedin_profile_url", "twitter_profile_url", "facebook_profile_url")
+
+
+def free_miss(endpoint_id: str, document: object) -> bool:
+    """Enrichlayer charges no credit when reverse phone lookup finds no social profile."""
+    if endpoint_id != "enrichlayer.contacts.reverse-phone" or not isinstance(document, dict):
+        return False
+    return all(key in document and document[key] is None for key in _REVERSE_PHONE_PROFILES)
+
+
 def observed_micro(rule: dict, unit_micro: int, document: object, ceiling: int) -> int | None:
     """A malformed or missing result list cannot be used as zero-charge evidence."""
     if not isinstance(document, dict):
