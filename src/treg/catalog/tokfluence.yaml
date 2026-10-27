@@ -1,5 +1,5 @@
 # Tokfluence: a searchable index of 15M+ TikTok creators (stats, recent posts, contact emails and
-# phones where known) plus on-demand post analysis. Bearer key (tkf_live_…, 41 chars) in the
+# phones where known), stored audience reports, posts and comments. Bearer key (tkf_live_…, 41 chars) in the
 # Authorization header; no query-string auth. Self-serve keys at developers.tokfluence.com/api_keys.
 #
 # THE METER: every metered response carries X-Credits-Remaining (errors included). Search and
@@ -17,9 +17,11 @@ source:
   curated: '2026-10-27'
 limits: "120 requests/minute per API key across /v1 and /mcp; 600/minute per IP. 429 rate_limited with Retry-After. 402 insufficient_credits when the wallet is empty (nothing runs)."
 pricing_url: https://tokfluence.com/tiktok-api
+# Both ids already exist as influencers.club's proposed capabilities (same text); repeated here so
+# this file validates on its own. Two providers now share each, so they are ready to promote.
 proposed_capabilities:
-  tiktok.user.audience: "Read a TikTok creator's engaged-audience report"
-  tiktok.video.analyze: "Queue fresh analysis of TikTok video URLs, to read back later"
+  creators.profile: "Get a creator's profile, contacts and stats"
+  creators.analytics: "Get a creator's performance analytics and audience"
 endpoints:
   # --- discovery -------------------------------------------------------------------------------
   - id: tokfluence.creators.search
@@ -103,12 +105,44 @@ endpoints:
       note: "1 credit per creator returned; an empty result is free. meta.billing.credits_charged reports the charge for each call."
     docs_url: https://developers.tokfluence.com/docs/semantic_search
 
+  # --- free pre-flight --------------------------------------------------------------------------
+  - id: tokfluence.lists.list
+    added: '2026-10-27'
+    kind: utility
+    domain: account
+    capability: account.identity
+    platform: account
+    scope: own_account
+    method: GET
+    path: /v1/lists
+    name: "Check a Tokfluence key (free): list your saved creator lists"
+    summary: "Free pre-flight: confirms the key works and lists the creator lists saved on its own account. Returns no creator data and charges no credits."
+    input:
+      queryParams:
+        page: {type: integer, required: false, default: 1}
+        per_page: {type: integer, required: false, default: 50, min: 1, max: 200, example: 1}
+        archived: {type: boolean, required: false}
+      note: "returns {data: [list], meta: {page, per_page, total}}. A bad key answers 401 unauthorized. Same route as the connection probe."
+    test_request:
+      queryParams: {per_page: 1}
+    cost:
+      type: free
+      value: 0
+      currency: USD
+      unit: call
+      source: docs
+      source_url: https://developers.tokfluence.com/docs/credits
+      checked: '2026-10-27'
+      confidence: documented
+      note: "Not credit-metered: list routes return no creator data."
+    docs_url: https://developers.tokfluence.com/docs
+
   # --- one creator -----------------------------------------------------------------------------
   - id: tokfluence.creators.profile
     added: '2026-10-27'
     domain: enrich
-    capability: tiktok.user.profile
-    platform: tiktok
+    capability: creators.profile
+    platform: creators
     scope: any_account
     method: GET
     path: /v1/creators/{id}
@@ -165,8 +199,8 @@ endpoints:
   - id: tokfluence.creators.audience
     added: '2026-10-27'
     domain: enrich
-    capability: tiktok.user.audience
-    platform: tiktok
+    capability: creators.analytics
+    platform: creators
     scope: any_account
     method: GET
     path: /v1/creators/{id}/audience
@@ -203,7 +237,7 @@ endpoints:
     input:
       pathParams:
         id: {type: string, required: true, example: "7663545266246520095", note: "TikTok video id (the trailing number of the URL)"}
-      note: "Cached read; it does not trigger a fresh analysis (see tokfluence.posts.analyze)."
+      note: "Cached read; it does not trigger a fresh analysis."
     test_request:
       pathParams: {id: "7663545266246520095"}
     miss: {status: 404, means: "post_not_found: no post with that id in the index. Refunded, so free."}
@@ -237,6 +271,7 @@ endpoints:
     test_request:
       pathParams: {id: "7663545266246520095"}
       queryParams: {limit: 1}
+    miss: {status: 404, means: "post_not_found: no post with that id in the index. Refunded, so free."}
     cost:
       type: per_call
       value: 2
@@ -245,37 +280,5 @@ endpoints:
       source_url: https://developers.tokfluence.com/docs/credits
       checked: '2026-10-27'
       confidence: verified
-      note: "2 credits per page with rows; an empty page is free. OBSERVED 2026-10-27 (re-run): limit=1 returned 1 comment (meta.total 528) and moved the balance by 2. The free empty page is documented, not re-observed."
-    docs_url: https://developers.tokfluence.com/docs/posts
-
-  - id: tokfluence.posts.analyze
-    added: '2026-10-27'
-    domain: enrich
-    capability: tiktok.video.analyze
-    platform: tiktok
-    scope: any_account
-    method: POST
-    path: /v1/posts/analyze
-    name: "Queue fresh analysis of TikTok post URLs"
-    summary: "Submit up to 50 TikTok video URLs to the analysis pipeline; read the results back with tokfluence.posts.detail after a short delay."
-    input:
-      bodyType: json
-      body:
-        urls: {type: array, required: true, example: ["https://www.tiktok.com/@khaby.lame/video/7663545266246520095"], note: "Up to 50 TikTok video URLs. THE PRICE DIAL: 25 credits per URL"}
-        force: {type: boolean, required: false, note: "Re-analyse even recently analysed posts"}
-      note: "returns {data: [{url, postId, status: pending}], meta: {submitted, cost}}."
-    test_request:
-      body: {urls: ["https://www.tiktok.com/@khaby.lame/video/7663545266246520095"]}
-    cost:
-      type: per_result
-      value: 25
-      currency: credit
-      per: 1
-      unit: item
-      source: observed
-      source_url: https://developers.tokfluence.com/docs/credits
-      checked: '2026-10-27'
-      confidence: verified
-      reported_charge: {path: meta.cost, unit: credit}
-      note: "25 credits per URL submitted. OBSERVED 2026-10-27: one URL, meta.cost=25, balance moved by 25."
+      note: "2 credits per call (per_call). A page that returns no comments is not charged (the API waives it), and a 404 post_not_found is refunded like every non-2xx. OBSERVED 2026-10-27 (re-run): limit=1 returned 1 comment (meta.total 528) and moved the balance by 2. The free empty page is documented, not re-observed."
     docs_url: https://developers.tokfluence.com/docs/posts

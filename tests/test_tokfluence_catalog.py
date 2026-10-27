@@ -1,5 +1,6 @@
-"""Tokfluence listing: every catalogued endpoint is priced in credits that fx.yaml converts to USD,
-so the file is platform-eligible end to end."""
+"""Tokfluence listing: every data endpoint is priced in credits that fx.yaml converts to USD, so the
+file is platform-eligible end to end. The free /v1/lists pre-flight is the caller's own account
+(own_account), which treg never serves on a platform key by design."""
 from treg import oauth_providers as P
 from treg.domain.catalog import store as cs
 
@@ -16,4 +17,7 @@ def test_tokfluence_catalog_is_platform_priced():
     eps = [ep for ep in c.by_id.values() if ep.get("provider") == "tokfluence"]
     assert 8 <= len(eps) <= 15
     for ep in eps:
+        if ep.get("scope") == "own_account":
+            assert not c.platform_eligible(ep), ep["id"]
+            continue
         assert c.platform_eligible(ep), ep["id"]
