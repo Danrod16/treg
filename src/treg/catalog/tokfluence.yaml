@@ -206,6 +206,7 @@ endpoints:
       note: "Cached read; it does not trigger a fresh analysis (see tokfluence.posts.analyze)."
     test_request:
       pathParams: {id: "7663545266246520095"}
+    miss: {status: 404, means: "post_not_found: no post with that id in the index. Refunded, so free."}
     cost:
       type: per_success
       value: 1
