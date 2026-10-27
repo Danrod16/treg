@@ -100,7 +100,7 @@ endpoints:
       checked: '2026-10-27'
       confidence: documented
       reported_charge: {path: meta.billing.credits_charged, unit: credit}
-      note: "1 credit per creator returned; an empty result is free. The vendor's live run on 2026-10-27 used an internal key on legacy per-request billing (25 credits per call), so the per-creator price was not observed on the wire; meta.billing.credits_charged reports the true charge for any account."
+      note: "1 credit per creator returned; an empty result is free. meta.billing.credits_charged reports the charge for each call."
     docs_url: https://developers.tokfluence.com/docs/semantic_search
 
   # --- one creator -----------------------------------------------------------------------------
@@ -159,7 +159,7 @@ endpoints:
       source_url: https://developers.tokfluence.com/docs/credits
       checked: '2026-10-27'
       confidence: verified
-      note: "25 credits per call for up to 50 posts. OBSERVED 2026-10-27: limit=1 moved the balance by 25."
+      note: "25 credits per call for up to 50 posts. OBSERVED 2026-10-27: limit=1 returned 200 and moved the balance by 25. A first call can answer 202 analysis_pending, which is not charged (observed: refunded); retry after a few seconds."
     docs_url: https://developers.tokfluence.com/docs/creators
 
   - id: tokfluence.creators.audience
@@ -244,7 +244,7 @@ endpoints:
       source_url: https://developers.tokfluence.com/docs/credits
       checked: '2026-10-27'
       confidence: verified
-      note: "2 credits per page. OBSERVED 2026-10-27: two public posts returned 200 with an EMPTY page (meta.total 0) and each moved the balance by 2, so an empty page is billed. A page with rows was not observed."
+      note: "2 credits per page with rows; an empty page is free. OBSERVED 2026-10-27 (re-run): limit=1 returned 1 comment (meta.total 528) and moved the balance by 2. The free empty page is documented, not re-observed."
     docs_url: https://developers.tokfluence.com/docs/posts
 
   - id: tokfluence.posts.analyze
